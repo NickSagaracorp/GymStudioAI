@@ -1,51 +1,58 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
-# dependencies
+# dependencias
 node_modules/
 
-# Expo
+# Expo y Metro
 .expo/
+.expo-export/
 dist/
 web-build/
 expo-env.d.ts
+expo-env.d.ts.map
+.metro-health-check*
 
-# Native
+# proyectos nativos: los regenera `npx expo prebuild`
+/ios
+/android
 .kotlin/
-*.orig.*
+
+# artefactos de compilación: se generan, no se versionan
+*.apk
+*.aab
+*.ipa
+*.app
+*.dSYM.zip
+
+# claves, certificados y variables de entorno
+# .env lleva la clave de OpenAI: nunca debe subirse
+.env
+.env.*
+!.env.example
 *.jks
+*.keystore
 *.p8
 *.p12
 *.key
+*.pem
 *.mobileprovision
+*.cer
+*.certSigningRequest
+google-services.json
+GoogleService-Info.plist
 
-# Metro
-.metro-health-check*
+# catálogo de ejercicios: lo descarga y genera `npm run catalogo`
+assets/catalog/ejercicios.json
+assets/thumbs/
 
-# debug
+# TypeScript y pruebas
+*.tsbuildinfo
+coverage/
+
+# registros
 npm-debug.*
 yarn-debug.*
 yarn-error.*
+*.log
 
-# macOS
+# sistema operativo
 .DS_Store
-*.pem
-
-# local env files
-.env*.local
-
-# typescript
-*.tsbuildinfo
-
-# generated native folders
-/ios
-/android
-
-# catálogo generado por scripts/build-catalog.js
-assets/thumbs/
-assets/catalog/ejercicios.json
-assets/thumbs/index.ts
-.expo-export/
-
-# claves y variables de entorno
-.env
-.env.local
+Thumbs.db
