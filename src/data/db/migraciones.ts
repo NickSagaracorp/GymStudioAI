@@ -102,6 +102,48 @@ export const MIGRACIONES: string[][] = [
     'CREATE INDEX idx_sesion_dia ON sesion (dia_programa_id)',
     'CREATE INDEX idx_dia_programa ON dia_programa (programa_id, semana, dia)',
   ],
+  // 002 — nutrición
+  [
+    "ALTER TABLE perfil ADD COLUMN nivel_actividad TEXT NOT NULL DEFAULT 'moderado'",
+    `CREATE TABLE objetivo_nutricional (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      kcal REAL NOT NULL,
+      proteina_g REAL NOT NULL,
+      carbos_g REAL NOT NULL,
+      grasa_g REAL NOT NULL,
+      fibra_g REAL NOT NULL,
+      tope_azucares_g REAL NOT NULL,
+      tope_saturada_g REAL NOT NULL,
+      ajuste_manual INTEGER NOT NULL DEFAULT 0,
+      calculado_en TEXT NOT NULL
+    )`,
+    `CREATE TABLE comida (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      fecha TEXT NOT NULL,
+      momento TEXT NOT NULL,
+      descripcion TEXT,
+      foto_uri TEXT,
+      origen TEXT NOT NULL,
+      creada_en TEXT NOT NULL
+    )`,
+    `CREATE TABLE alimento (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      comida_id INTEGER NOT NULL REFERENCES comida(id) ON DELETE CASCADE,
+      nombre TEXT NOT NULL,
+      cantidad_g REAL NOT NULL,
+      kcal REAL NOT NULL,
+      proteina_g REAL NOT NULL,
+      carbos_g REAL NOT NULL,
+      azucares_g REAL NOT NULL,
+      grasa_g REAL NOT NULL,
+      grasa_saturada_g REAL NOT NULL,
+      grasa_trans_g REAL NOT NULL,
+      fibra_g REAL NOT NULL,
+      confianza TEXT
+    )`,
+    'CREATE INDEX idx_comida_fecha ON comida (fecha)',
+    'CREATE INDEX idx_alimento_comida ON alimento (comida_id)',
+  ],
 ];
 
 export async function versionActual(adaptador: Adaptador): Promise<number> {
