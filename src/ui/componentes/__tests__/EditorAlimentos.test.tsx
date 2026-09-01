@@ -118,3 +118,67 @@ describe('editor de alimentos', () => {
     expect(queryByTestId('sin-alimentos')).toBeNull();
   });
 });
+
+describe('registro a mano', () => {
+  const vacio: Alimento = {
+    nombre: 'Alimento',
+    cantidadG: 100,
+    kcal: 0,
+    proteinaG: 0,
+    carbosG: 0,
+    azucaresG: 0,
+    grasaG: 0,
+    grasaSaturadaG: 0,
+    grasaTransG: 0,
+    fibraG: 0,
+    confianza: null,
+  };
+
+  it('permite escribir las calorías de un alimento en blanco', async () => {
+    const onCambio = jest.fn();
+    const { getByTestId } = await render(
+      <EditorAlimentos alimentos={[vacio]} onCambio={onCambio} />,
+    );
+
+    await fireEvent.changeText(getByTestId('kcal-0'), '250');
+
+    const nuevos = onCambio.mock.calls[0]?.[0] as Alimento[];
+    expect(nuevos[0]?.kcal).toBe(250);
+  });
+
+  it('permite escribir proteína, carbohidratos y grasa', async () => {
+    const onCambio = jest.fn();
+    const { getByTestId } = await render(
+      <EditorAlimentos alimentos={[vacio]} onCambio={onCambio} />,
+    );
+
+    await fireEvent.changeText(getByTestId('proteinaG-0'), '30');
+    await fireEvent.changeText(getByTestId('carbosG-0'), '45');
+    await fireEvent.changeText(getByTestId('grasaG-0'), '12');
+
+    const llamadas = onCambio.mock.calls.map((c) => (c[0] as Alimento[])[0]);
+    expect(llamadas[0]?.proteinaG).toBe(30);
+    expect(llamadas[1]?.carbosG).toBe(45);
+    expect(llamadas[2]?.grasaG).toBe(12);
+  });
+
+  it('ignora macros vacías o negativas', async () => {
+    const onCambio = jest.fn();
+    const { getByTestId } = await render(
+      <EditorAlimentos alimentos={[vacio]} onCambio={onCambio} />,
+    );
+
+    await fireEvent.changeText(getByTestId('kcal-0'), '');
+    await fireEvent.changeText(getByTestId('kcal-0'), '-5');
+
+    expect(onCambio).not.toHaveBeenCalled();
+  });
+
+  it('muestra las macros del alimento en sus campos', async () => {
+    const { getByTestId } = await render(
+      <EditorAlimentos alimentos={[alimento()]} onCambio={jest.fn()} />,
+    );
+    expect(getByTestId('kcal-0').props.value).toBe('130');
+    expect(getByTestId('carbosG-0').props.value).toBe('28');
+  });
+});

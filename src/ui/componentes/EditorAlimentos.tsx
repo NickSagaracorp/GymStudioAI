@@ -16,6 +16,16 @@ const campoCantidad = {
   paddingVertical: espaciado.xs,
 };
 
+const campoMacro = { ...campoCantidad, width: 62 };
+
+/** Campos de macros editables: sin ellos no se podría registrar nada a mano. */
+const MACROS_EDITABLES = [
+  { clave: 'kcal', etiqueta: 'kcal' },
+  { clave: 'proteinaG', etiqueta: 'P' },
+  { clave: 'carbosG', etiqueta: 'C' },
+  { clave: 'grasaG', etiqueta: 'G' },
+] as const;
+
 export const ALIMENTO_VACIO: Alimento = {
   nombre: 'Alimento',
   cantidadG: 100,
@@ -42,6 +52,7 @@ export function EditorAlimentos({
   onCambio: (alimentos: Alimento[]) => void;
 }) {
   const [borradores, setBorradores] = useState<Record<number, string>>({});
+  const [borradoresMacro, setBorradoresMacro] = useState<Record<string, string>>({});
   const total = sumarAlimentos(alimentos);
 
   function cambiarCantidad(indice: number, texto: string) {
@@ -51,8 +62,29 @@ export function EditorAlimentos({
     const original = alimentos[indice];
     if (!original || Number.isNaN(cantidad) || cantidad <= 0) return;
 
+    setBorradoresMacro(
+      Object.fromEntries(
+        Object.entries(borradoresMacro).filter(([clave]) => !clave.startsWith(`${indice}-`)),
+      ),
+    );
+
     onCambio(
       alimentos.map((alimento, i) => (i === indice ? escalarAlimento(original, cantidad) : alimento)),
+    );
+  }
+
+  function cambiarMacro(
+    indice: number,
+    clave: (typeof MACROS_EDITABLES)[number]['clave'],
+    texto: string,
+  ) {
+    setBorradoresMacro({ ...borradoresMacro, [`${indice}-${clave}`]: texto });
+
+    const valor = Number.parseFloat(texto.replace(',', '.'));
+    if (Number.isNaN(valor) || valor < 0) return;
+
+    onCambio(
+      alimentos.map((alimento, i) => (i === indice ? { ...alimento, [clave]: valor } : alimento)),
     );
   }
 
@@ -63,6 +95,7 @@ export function EditorAlimentos({
   function borrar(indice: number) {
     onCambio(alimentos.filter((_, i) => i !== indice));
     setBorradores({});
+    setBorradoresMacro({});
   }
 
   return (
@@ -126,9 +159,7 @@ export function EditorAlimentos({
             />
             <Text style={tipografia.tenue}>g</Text>
 
-            <Text testID={`kcal-${indice}`} style={{ ...tipografia.cuerpo, flex: 1 }}>
-              {Math.round(alimento.kcal)} kcal
-            </Text>
+            <View style={{ flex: 1 }} />
 
             <Pressable
               testID={`borrar-${indice}`}
@@ -145,9 +176,20 @@ export function EditorAlimentos({
             </Pressable>
           </View>
 
-          <Text testID={`macros-${indice}`} style={tipografia.tenue}>
-            P {alimento.proteinaG} g · C {alimento.carbosG} g · G {alimento.grasaG} g
-          </Text>
+          <View style={{ flexDirection: 'row', gap: espaciado.sm, flexWrap: 'wrap' }}>
+            {MACROS_EDITABLES.map(({ clave, etiqueta }) => (
+              <View key={clave} style={{ alignItems: 'center', gap: 2 }}>
+                <Text style={tipografia.tenue}>{etiqueta}</Text>
+                <TextInput
+                  testID={`${clave}-${indice}`}
+                  keyboardType="decimal-pad"
+                  value={borradoresMacro[`${indice}-${clave}`] ?? String(alimento[clave])}
+                  onChangeText={(texto) => cambiarMacro(indice, clave, texto)}
+                  style={campoMacro}
+                />
+              </View>
+            ))}
+          </View>
         </View>
       ))}
 
