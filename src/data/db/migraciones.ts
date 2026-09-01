@@ -144,6 +144,16 @@ export const MIGRACIONES: string[][] = [
     'CREATE INDEX idx_comida_fecha ON comida (fecha)',
     'CREATE INDEX idx_alimento_comida ON alimento (comida_id)',
   ],
+  // 003 — series descendentes
+  [
+    // Una serie normal es una fila con bajada 0; una descendente son varias
+    // filas con el mismo numero y bajada 0, 1, 2...
+    'ALTER TABLE serie ADD COLUMN bajada INTEGER NOT NULL DEFAULT 0',
+    `CREATE TABLE ejercicio_descendente (
+      ejercicio_id TEXT PRIMARY KEY,
+      activado_en TEXT NOT NULL
+    )`,
+  ],
 ];
 
 export async function versionActual(adaptador: Adaptador): Promise<number> {

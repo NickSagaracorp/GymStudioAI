@@ -51,6 +51,7 @@ function seriesDe(
     sesionId,
     ejercicioId,
     numero: indice + 1,
+    bajada: 0,
     pesoLogrado: peso,
     repsLogradas,
     completadaEn: fecha,

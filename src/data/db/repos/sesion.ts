@@ -15,6 +15,8 @@ export interface SerieRegistrada {
   sesionId: number;
   ejercicioId: string;
   numero: number;
+  /** 0 en una serie normal; 1, 2, 3... en las bajadas de una descendente. */
+  bajada?: number;
   pesoMeta: number | null;
   repsMeta: number;
   pesoLogrado: number | null;
@@ -33,6 +35,7 @@ interface FilaSerie {
   sesion_id: number;
   ejercicio_id: string;
   numero: number;
+  bajada: number;
   peso_logrado: number | null;
   reps_logradas: number;
   completada_en: string;
@@ -53,6 +56,7 @@ function aSerieHecha(fila: FilaSerie): SerieHecha {
     sesionId: fila.sesion_id,
     ejercicioId: fila.ejercicio_id,
     numero: fila.numero,
+    bajada: fila.bajada,
     pesoLogrado: fila.peso_logrado,
     repsLogradas: fila.reps_logradas,
     completadaEn: fila.completada_en,
@@ -60,7 +64,7 @@ function aSerieHecha(fila: FilaSerie): SerieHecha {
 }
 
 const COLUMNAS_SERIE =
-  'sesion_id, ejercicio_id, numero, peso_logrado, reps_logradas, completada_en';
+  'sesion_id, ejercicio_id, numero, bajada, peso_logrado, reps_logradas, completada_en';
 
 export function repoSesion(adaptador: Adaptador) {
   return {
@@ -82,21 +86,28 @@ export function repoSesion(adaptador: Adaptador) {
       return fila ? aSesion(fila) : null;
     },
 
-    /** Confirmar una serie ya registrada la reescribe: el último valor manda. */
+    /**
+     * Confirmar una serie ya registrada la reescribe: el último valor manda.
+     * La bajada entra en la clave, para que corregir una no borre las demás.
+     */
     async registrarSerie(serie: SerieRegistrada): Promise<void> {
+      const bajada = serie.bajada ?? 0;
+
       await adaptador.ejecutar(
-        'DELETE FROM serie WHERE sesion_id = ? AND ejercicio_id = ? AND numero = ?',
-        [serie.sesionId, serie.ejercicioId, serie.numero],
+        `DELETE FROM serie
+         WHERE sesion_id = ? AND ejercicio_id = ? AND numero = ? AND bajada = ?`,
+        [serie.sesionId, serie.ejercicioId, serie.numero, bajada],
       );
       await adaptador.ejecutar(
         `INSERT INTO serie (
-           sesion_id, ejercicio_id, numero, peso_meta, reps_meta,
+           sesion_id, ejercicio_id, numero, bajada, peso_meta, reps_meta,
            peso_logrado, reps_logradas, completada_en
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           serie.sesionId,
           serie.ejercicioId,
           serie.numero,
+          bajada,
           serie.pesoMeta,
           serie.repsMeta,
           serie.pesoLogrado,
@@ -106,12 +117,20 @@ export function repoSesion(adaptador: Adaptador) {
       );
     },
 
+    /** Borra una bajada concreta, para cuando el usuario quita una de la lista. */
+    async borrarBajada(sesionId: number, ejercicioId: string, bajada: number): Promise<void> {
+      await adaptador.ejecutar(
+        'DELETE FROM serie WHERE sesion_id = ? AND ejercicio_id = ? AND bajada = ?',
+        [sesionId, ejercicioId, bajada],
+      );
+    },
+
     /** Series completadas de un ejercicio, de la más reciente a la más antigua. */
     async historialDe(ejercicioId: string, limite = 60): Promise<SerieHecha[]> {
       const filas = await adaptador.consultar<FilaSerie>(
         `SELECT ${COLUMNAS_SERIE} FROM serie
          WHERE ejercicio_id = ? AND completada_en IS NOT NULL
-         ORDER BY completada_en DESC, numero DESC
+         ORDER BY completada_en DESC, numero DESC, bajada
          LIMIT ?`,
         [ejercicioId, limite],
       );
@@ -120,7 +139,7 @@ export function repoSesion(adaptador: Adaptador) {
 
     async seriesDe(sesionId: number): Promise<SerieHecha[]> {
       const filas = await adaptador.consultar<FilaSerie>(
-        `SELECT ${COLUMNAS_SERIE} FROM serie WHERE sesion_id = ? ORDER BY ejercicio_id, numero`,
+        `SELECT ${COLUMNAS_SERIE} FROM serie WHERE sesion_id = ? ORDER BY ejercicio_id, numero, bajada`,
         [sesionId],
       );
       return filas.map(aSerieHecha);

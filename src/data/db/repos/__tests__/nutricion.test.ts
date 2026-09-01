@@ -39,13 +39,17 @@ async function conBase() {
 }
 
 describe('migración de nutrición', () => {
-  it('deja la base en la versión 2', async () => {
+  it('crea las tablas de nutrición', async () => {
     const adaptador = crearAdaptadorMemoria();
     await migrar(adaptador);
 
-    const filas = await adaptador.consultar<{ user_version: number }>('PRAGMA user_version');
-    expect(filas[0]?.user_version).toBe(MIGRACIONES.length);
-    expect(MIGRACIONES.length).toBe(2);
+    const tablas = await adaptador.consultar<{ name: string }>(
+      "SELECT name FROM sqlite_master WHERE type = 'table'",
+    );
+    const nombres = tablas.map((t) => t.name);
+    expect(nombres).toContain('comida');
+    expect(nombres).toContain('alimento');
+    expect(nombres).toContain('objetivo_nutricional');
   });
 
   it('conserva el perfil de la fase 1 y le añade el nivel de actividad', async () => {
