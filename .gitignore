@@ -45,3 +45,7 @@ assets/thumbs/
 assets/catalog/ejercicios.json
 assets/thumbs/index.ts
 .expo-export/
+
+# claves y variables de entorno
+.env
+.env.local

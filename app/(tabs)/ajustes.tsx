@@ -16,6 +16,7 @@ import {
   conservarFotos as leerConservarFotos,
   guardar as guardarAjuste,
   modelo as leerModelo,
+  usaClavePorDefecto,
 } from '@/services/ia/configuracion';
 import { colores, espaciado, radio, tipografia } from '@/ui/tema';
 
@@ -25,6 +26,7 @@ export default function Ajustes() {
   const { perfil, programa, catalogo, cache, nutricion, mediciones } = useApp();
 
   const [apiKey, setApiKey] = useState('');
+  const [porDefecto, setPorDefecto] = useState(false);
   const [modelo, setModelo] = useState('');
   const [conservarFotos, setConservarFotos] = useState(true);
   const [kcalObjetivo, setKcalObjetivo] = useState<number | null>(null);
@@ -36,8 +38,9 @@ export default function Ajustes() {
     let vivo = true;
 
     (async () => {
-      const [clave, nombreModelo, conservar, objetivo, total] = await Promise.all([
+      const [clave, esPorDefecto, nombreModelo, conservar, objetivo, total] = await Promise.all([
         leerApiKey(),
+        usaClavePorDefecto(),
         leerModelo(),
         leerConservarFotos(),
         nutricion.objetivo(),
@@ -46,6 +49,7 @@ export default function Ajustes() {
       if (!vivo) return;
 
       setApiKey(clave);
+      setPorDefecto(esPorDefecto);
       setModelo(nombreModelo);
       setConservarFotos(conservar);
       setKcalObjetivo(objetivo?.kcal ?? null);
@@ -64,6 +68,7 @@ export default function Ajustes() {
       return;
     }
     await guardarAjuste(CLAVE_API, limpia);
+    setPorDefecto(await usaClavePorDefecto());
     setMensaje(limpia === '' ? 'Clave borrada.' : 'Clave guardada.');
   }
 
@@ -196,6 +201,11 @@ export default function Ajustes() {
       <Text style={tipografia.tenue}>
         Se guarda cifrada en el dispositivo. Se usará para el análisis de comidas.
       </Text>
+      {porDefecto && (
+        <Text testID="aviso-clave-por-defecto" style={{ ...tipografia.tenue, color: colores.aviso }}>
+          Cargada desde el fichero .env del proyecto. Escribe otra aquí para reemplazarla.
+        </Text>
+      )}
       <TextInput
         testID="campo-api-key"
         value={apiKey}
