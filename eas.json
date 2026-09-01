@@ -25,12 +25,6 @@
     }
   },
   "submit": {
-    "production": {
-      "ios": {
-        "appleId": "PON_AQUI_TU_APPLE_ID",
-        "ascAppId": "PON_AQUI_EL_ID_DE_APP_STORE_CONNECT",
-        "appleTeamId": "PON_AQUI_TU_TEAM_ID"
-      }
-    }
+    "production": {}
   }
 }

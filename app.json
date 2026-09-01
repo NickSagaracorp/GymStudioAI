@@ -8,7 +8,10 @@
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.sagaracorp.gymstudioai"
+      "bundleIdentifier": "com.sagaracorp.gymstudioai",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +22,10 @@
       },
       "predictiveBackGestureEnabled": false,
       "package": "com.sagaracorp.gymstudioai",
-      "versionCode": 2
+      "versionCode": 2,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,8 +34,22 @@
       "expo-router",
       "expo-sqlite",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "GymStudio AI usa tus fotos para estimar las calorías de tus comidas.",
+          "cameraPermission": "GymStudio AI usa la cámara para fotografiar tus comidas y estimar sus calorías."
+        }
+      ]
     ],
-    "scheme": "gymstudioai"
+    "scheme": "gymstudioai",
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "85ed5889-1cc2-4966-a5df-872596d4da33"
+      }
+    },
+    "owner": "sagaracorp"
   }
 }
