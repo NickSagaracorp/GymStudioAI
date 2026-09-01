@@ -74,22 +74,28 @@ El catálogo se descarga **en tiempo de compilación**, no en ejecución. El scr
 2. Lista negra por palabra clave en el slug: `bosu`, `exercise-ball`,
    `stability`, `stork`, `bowling`, `v-sit`, `arm-blaster`. Son variantes
    inestables o con material raro que no deben entrar en un plan generado.
+3. Solo los 13 grupos musculares que maneja el motor: `abs`, `biceps`,
+   `calves`, `delts`, `forearms`, `glutes`, `hamstrings`, `lats`, `pectorals`,
+   `quads`, `traps`, `triceps`, `upper-back`.
 
 Los ejercicios excluidos siguen accesibles desde el buscador manual; lo que el
 filtro decide es qué puede elegir el generador.
 
 ### Cobertura resultante
 
-666 ejercicios. Por músculo (mancuerna / peso corporal):
+566 ejercicios, tras acotar además a los 13 grupos musculares que usa el motor
+(se descartan `cardio`, `spine`, `serratus-anterior`, `abductors`, `adductors` y
+`levator-scapulae`). Por músculo (mancuerna / peso corporal):
 
 | Músculo | Manc. | Corp. | Músculo | Manc. | Corp. |
 |---|---|---|---|---|---|
-| biceps | 63 | 5 | glutes | 17 | 48 |
-| delts | 59 | 6 | quads | 5 | 19 |
-| triceps | 38 | 35 | hamstrings | 1 | 15 |
-| pectorals | 28 | 50 | calves | 7 | 18 |
-| upper-back | 10 | 21 | abs | 1 | 108 |
-| lats | 0 | 39 | traps | 4 | 2 |
+| biceps | 63 | 5 | glutes | 16 | 34 |
+| delts | 59 | 5 | quads | 5 | 12 |
+| triceps | 38 | 33 | hamstrings | 1 | 10 |
+| pectorals | 28 | 45 | calves | 7 | 8 |
+| upper-back | 10 | 20 | abs | 1 | 107 |
+| lats | 0 | 33 | traps | 4 | 2 |
+| forearms | 15 | 5 | | | |
 
 El catálogo de mancuernas por sí solo no tiene dorsales, isquiotibiales ni
 abdominales utilizables. Por eso se incorpora el de peso corporal: no es una
@@ -160,7 +166,7 @@ src/
   ui/tema/                  colores.ts, tipografia.ts, espaciado.ts
 assets/
   catalog/ejercicios.json
-  thumbs/                   666 .webp + index.ts (mapa de requires)
+  thumbs/                   566 .webp + index.ts (mapa de requires)
 scripts/build-catalog.mjs
 ```
 
@@ -412,9 +418,9 @@ La pantalla de progreso dibuja una gráfica por métrica con selector de rango
 
 ## 11. Estrategia offline y assets
 
-**Empaquetado en el binario:** `ejercicios.json` (666 ejercicios en español,
-aproximadamente 700 KB) y las 666 miniaturas `.webp` (unos 14 MB). App de
-alrededor de 30 MB.
+**Empaquetado en el binario:** `ejercicios.json` (566 ejercicios en español,
+unos 180 KB) y las 566 miniaturas `.webp` (10,3 MB). App de
+alrededor de 25 MB.
 
 **Bajo demanda:** los GIFs se descargan de jsDelivr la primera vez que se abre el
 ejercicio y se guardan en `FileSystem.documentDirectory + "gifs/"`. La caché tiene
