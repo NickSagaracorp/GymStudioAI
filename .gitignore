@@ -43,3 +43,4 @@ yarn-error.*
 # catálogo generado por scripts/build-catalog.js
 assets/thumbs/
 assets/catalog/ejercicios.json
+assets/thumbs/index.ts
