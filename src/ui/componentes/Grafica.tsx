@@ -8,10 +8,43 @@ export interface Punto {
 }
 
 const ANCHO = 300;
-const ALTO = 110;
+const ALTO = 90;
 
+function formatear(valor: number): string {
+  return Number.isInteger(valor) ? String(valor) : valor.toFixed(1);
+}
+
+export interface Coordenada {
+  x: number;
+  y: number;
+}
+
+/**
+ * Proyecta los valores sobre el lienzo. Cuando todos son iguales la línea va
+ * centrada, no pegada al borde inferior.
+ */
+export function coordenadasDe(puntos: Punto[], ancho = ANCHO, alto = ALTO): Coordenada[] {
+  if (puntos.length === 0) return [];
+
+  const valores = puntos.map((p) => p.valor);
+  const minimo = Math.min(...valores);
+  const rango = Math.max(...valores) - minimo;
+
+  return puntos.map((punto, indice) => ({
+    x: puntos.length === 1 ? ancho / 2 : (indice / (puntos.length - 1)) * ancho,
+    y: rango === 0 ? alto / 2 : alto - ((punto.valor - minimo) / rango) * alto,
+  }));
+}
+
+/**
+ * Con un solo registro no hay evolución que dibujar, así que se muestra el
+ * valor y ya. La línea aparece a partir del segundo, que es cuando significa
+ * algo.
+ */
 export function Grafica({ puntos, titulo }: { puntos: Punto[]; titulo: string }) {
-  if (puntos.length === 0) {
+  const ultimo = puntos[puntos.length - 1];
+
+  if (!ultimo) {
     return (
       <Text testID={`grafica-vacia-${titulo}`} style={tipografia.tenue}>
         Sin datos de {titulo} todavía.
@@ -19,23 +52,39 @@ export function Grafica({ puntos, titulo }: { puntos: Punto[]; titulo: string })
     );
   }
 
-  const valores = puntos.map((p) => p.valor);
-  const minimo = Math.min(...valores);
-  const maximo = Math.max(...valores);
-  const rango = maximo - minimo || 1;
+  const cabecera = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'baseline',
+        justifyContent: 'space-between',
+      }}
+    >
+      <Text style={tipografia.cuerpo}>{titulo}</Text>
+      <Text testID={`valor-${titulo}`} style={{ ...tipografia.seccion, color: colores.acento }}>
+        {formatear(ultimo.valor)}
+      </Text>
+    </View>
+  );
 
-  const coordenadas = puntos.map((punto, indice) => ({
-    x: puntos.length === 1 ? ANCHO / 2 : (indice / (puntos.length - 1)) * ANCHO,
-    y: ALTO - ((punto.valor - minimo) / rango) * ALTO,
-  }));
+  if (puntos.length === 1) {
+    return (
+      <View style={{ gap: espaciado.xs }}>
+        {cabecera}
+        <Text testID={`unico-${titulo}`} style={tipografia.tenue}>
+          Primer registro, {ultimo.etiqueta}. La evolución aparece con la siguiente medición.
+        </Text>
+      </View>
+    );
+  }
 
+  const coordenadas = coordenadasDe(puntos);
   const primero = puntos[0];
-  const ultimo = puntos[puntos.length - 1];
-  const variacion = (ultimo?.valor ?? 0) - (primero?.valor ?? 0);
+  const variacion = ultimo.valor - (primero?.valor ?? 0);
 
   return (
     <View style={{ gap: espaciado.xs }}>
-      <Text style={tipografia.cuerpo}>{titulo}</Text>
+      {cabecera}
       <Svg width="100%" height={ALTO} viewBox={`0 0 ${ANCHO} ${ALTO}`}>
         <Polyline
           testID={`linea-${titulo}`}
@@ -48,9 +97,9 @@ export function Grafica({ puntos, titulo }: { puntos: Punto[]; titulo: string })
           <Circle key={indice} cx={c.x} cy={c.y} r={3} fill={colores.acento} />
         ))}
       </Svg>
-      <Text style={tipografia.tenue}>
-        {primero?.etiqueta} → {ultimo?.etiqueta} · {variacion >= 0 ? '+' : ''}
-        {variacion.toFixed(1)}
+      <Text testID={`variacion-${titulo}`} style={tipografia.tenue}>
+        Desde {primero?.etiqueta} · {variacion >= 0 ? '+' : ''}
+        {formatear(variacion)}
       </Text>
     </View>
   );
