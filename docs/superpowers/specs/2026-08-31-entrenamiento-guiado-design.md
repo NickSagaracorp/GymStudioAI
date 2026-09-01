@@ -57,10 +57,12 @@ almacenamiento seguro de la clave) para que la fase 2 no obligue a rehacer nada.
 ## 4. Fuente de datos: el catálogo de ejercicios
 
 Origen: `github.com/JahelCuadrado/ExerciseGymGifsDB`, consumido por jsDelivr con
-**la versión fijada en `@v1.1.0`**. Nunca se apunta a `main`: un cambio en el repo
-no puede romper la app en producción.
+**la versión fijada en `@v1.2.0`**. Nunca se apunta a `main`: un cambio en el repo
+no puede romper la app en producción. Se descartó `v1.1.0`, que era la versión
+que documenta el README del repo, porque no contiene las miniaturas
+`.thumb.webp`, solo los GIF completos.
 
-Base: `https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@v1.1.0`
+Base: `https://cdn.jsdelivr.net/gh/JahelCuadrado/ExerciseGymGifsDB@v1.2.0`
 
 El catálogo se descarga **en tiempo de compilación**, no en ejecución. El script
 `scripts/build-catalog.mjs` toma `/api/es/equipment/dumbbell.json` y
@@ -77,13 +79,22 @@ El catálogo se descarga **en tiempo de compilación**, no en ejecución. El scr
 3. Solo los 13 grupos musculares que maneja el motor: `abs`, `biceps`,
    `calves`, `delts`, `forearms`, `glutes`, `hamstrings`, `lats`, `pectorals`,
    `quads`, `traps`, `triceps`, `upper-back`.
+4. Entradas comodín cuyo slug es el propio músculo, como `quads/quads`.
+5. Halterofilia y movimientos técnicos (`snatch`, `jerk`, `clean`,
+   `muscle-up`), ejercicios de agilidad (`quick-feet`, `farmers-walk`,
+   `inchworm`), calistenia de élite (`planche`, `maltese`, `front-lever`,
+   `back-lever`, `iron-cross`, `flag`) y estiramientos o posturas de yoga
+   (`stretch`, `-pose`).
+
+Los filtros 4 y 5 salieron de inspeccionar un programa generado, no de los
+tests: la categoría `strength` del catálogo origen deja pasar bastante ruido.
 
 Los ejercicios excluidos siguen accesibles desde el buscador manual; lo que el
 filtro decide es qué puede elegir el generador.
 
 ### Cobertura resultante
 
-566 ejercicios, tras acotar además a los 13 grupos musculares que usa el motor
+536 ejercicios, tras acotar además a los 13 grupos musculares que usa el motor
 (se descartan `cardio`, `spine`, `serratus-anterior`, `abductors`, `adductors` y
 `levator-scapulae`). Por músculo (mancuerna / peso corporal):
 
@@ -104,7 +115,11 @@ ampliación de alcance, es lo que hace viable un programa equilibrado.
 ### Campos que aporta cada ejercicio
 
 `id` (`musculo/slug`), `slug`, `name` en español, `muscle`, `bodyPart`,
-`equipment`, `category`, `secondaryMuscles`, `file`, `gifUrl`.
+`equipment`, `category`, `secondaryMuscles` y `file`.
+
+El campo `gifUrl` del catálogo **no se usa**: apunta a `ExerciseGymGigsDB`
+(errata del repo origen) y devuelve 404. La URL se construye desde la base
+del CDN y la ruta de `file`.
 
 **Limitación conocida:** el campo `instructions` del repo es texto genérico
 idéntico para todos los ejercicios ("Activa el core antes de iniciar el
@@ -119,7 +134,7 @@ guarda el resultado en base de datos.
 
 | Pieza | Elección |
 |---|---|
-| Runtime | React Native + Expo SDK 54, TypeScript en modo estricto |
+| Runtime | React Native + Expo SDK 57 (RN 0.86, React 19.2), TypeScript estricto |
 | Navegación | expo-router |
 | Estado de sesión | Zustand |
 | Base de datos | expo-sqlite con migraciones numeradas |
@@ -155,7 +170,8 @@ app/                        rutas de expo-router
   sesion/[sesionId].tsx
   ejercicio/[ejercicioId].tsx
 src/
-  data/catalog/             ejercicios.ts, consultas.ts, tipos.ts
+  nucleo/                   contenedor.ts, cerrarSesion.ts
+  data/catalog/             catalogo.ts, tipos.ts
   data/db/                  esquema.sql, migraciones.ts, repos/*.ts
   domain/planner/           splits.ts, parametros.ts, seleccion.ts,
                             progresion.ts, programa.ts, retos.ts
@@ -166,9 +182,13 @@ src/
   ui/tema/                  colores.ts, tipografia.ts, espaciado.ts
 assets/
   catalog/ejercicios.json
-  thumbs/                   566 .webp + index.ts (mapa de requires)
-scripts/build-catalog.mjs
+  thumbs/                   536 .webp + index.ts (mapa de requires)
+scripts/filtro.js, scripts/build-catalog.js
 ```
+
+El código propio vive en `src/nucleo`, no en `src/app`: expo-router da
+prioridad a `src/app` sobre `app/` como raíz de rutas, y esa carpeta le
+secuestraba el enrutado dejando todas las pantallas fuera del bundle.
 
 ## 6. Modelo de datos
 
@@ -360,6 +380,12 @@ pruebas sean posibles.
 **Orden dentro del día:** primero las anclas de los músculos grandes, después los
 accesorios de grandes, luego los pequeños, y core al final.
 
+**Tope por sesión:** 26 series, unos 58 minutos con 90 s de descanso. Al
+pasarse, se recortan accesorios empezando por el músculo con más volumen del
+día y, si el día es solo anclas, se bajan series de ancla hasta un suelo de
+dos. Nunca se elimina un ancla. Sin este tope, un torso de nivel avanzado
+salía con 33 series.
+
 **Duración estimada:** `series_totales × (45 s + descanso)`, mostrada en la
 tarjeta del día.
 
@@ -418,9 +444,9 @@ La pantalla de progreso dibuja una gráfica por métrica con selector de rango
 
 ## 11. Estrategia offline y assets
 
-**Empaquetado en el binario:** `ejercicios.json` (566 ejercicios en español,
-unos 180 KB) y las 566 miniaturas `.webp` (10,3 MB). App de
-alrededor de 25 MB.
+**Empaquetado en el binario:** `ejercicios.json` (536 ejercicios en español,
+unos 176 KB) y las 536 miniaturas `.webp` (12 MB). El bundle exportado de
+Android pesa 15 MB.
 
 **Bajo demanda:** los GIFs se descargan de jsDelivr la primera vez que se abre el
 ejercicio y se guardan en `FileSystem.documentDirectory + "gifs/"`. La caché tiene
