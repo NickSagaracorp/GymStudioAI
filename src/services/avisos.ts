@@ -1,14 +1,28 @@
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 
 const HORA_AVISO = 8;
 
 /**
- * Aviso semanal para registrar peso y medidas. Es una notificación local: no
- * hay servidor ni cuenta detrás. Si el permiso se deniega, no pasa nada — la
- * pantalla de inicio sigue mostrando la tarjeta ese día.
+ * expo-notifications no se puede ni importar dentro de Expo Go en Android:
+ * desde el SDK 53 su módulo lanza una excepción al evaluarse, porque Expo Go
+ * dejó de soportar notificaciones push. Hace falta una build de desarrollo.
+ */
+export function hayNotificaciones(): boolean {
+  return Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
+}
+
+/**
+ * Aviso semanal para registrar peso y medidas. Notificación local: no hay
+ * servidor ni cuenta detrás. Devuelve false si no se pudo programar, y la app
+ * sigue funcionando igual: la pantalla de inicio muestra la tarjeta ese día
+ * aunque no llegue el aviso.
  */
 export async function programarAvisoMedicion(diaSemana: number): Promise<boolean> {
+  if (!hayNotificaciones()) return false;
+
   try {
+    const Notifications = await import('expo-notifications');
+
     await Notifications.cancelAllScheduledNotificationsAsync();
 
     const permiso = await Notifications.getPermissionsAsync();

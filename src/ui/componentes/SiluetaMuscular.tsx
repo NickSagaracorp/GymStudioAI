@@ -1,4 +1,4 @@
-import Svg, { Ellipse, Path, Rect } from 'react-native-svg';
+import Svg, { Ellipse, Rect } from 'react-native-svg';
 import type { Musculo } from '@/data/catalog/tipos';
 import { colores } from '@/ui/tema';
 
@@ -6,85 +6,102 @@ type Forma =
   | { tipo: 'elipse'; cx: number; cy: number; rx: number; ry: number }
   | { tipo: 'rect'; x: number; y: number; ancho: number; alto: number; radio: number };
 
-type Regiones = Partial<Record<Musculo, Forma[]>>;
+/** Una pieza sin músculo es relleno anatómico: cabeza, cuello, cadera, pies. */
+interface Pieza {
+  musculo?: Musculo;
+  forma: Forma;
+}
+
+const elipse = (cx: number, cy: number, rx: number, ry: number): Forma => ({
+  tipo: 'elipse',
+  cx,
+  cy,
+  rx,
+  ry,
+});
+
+const rect = (x: number, y: number, ancho: number, alto: number, radio = 4): Forma => ({
+  tipo: 'rect',
+  x,
+  y,
+  ancho,
+  alto,
+  radio,
+});
 
 /**
- * Silueta esquemática sobre un lienzo de 100×220. No es una lámina de
- * anatomía: son regiones reconocibles, ligeras de pintar y coloreables.
+ * El cuerpo se dibuja con las propias regiones musculares más piezas neutras,
+ * en un lienzo de 100×220. No hay contorno aparte: así el resaltado no puede
+ * desalinearse del cuerpo, porque es el cuerpo.
  */
-const CONTORNO =
-  'M50 6 c6 0 10 5 10 11 s-4 11-10 11 s-10-5-10-11 S44 6 50 6 Z ' +
-  'M36 30 h28 l10 8 c3 2 4 5 4 8 v22 c0 4-1 7-3 10 l-5 8 v6 h-4 ' +
-  'l-3 34 v42 h-9 v-40 l-4-26 h-2 l-4 26 v40 h-9 v-42 l-3-34 h-4 v-6 ' +
-  'l-5-8 c-2-3-3-6-3-10 V46 c0-3 1-6 4-8 Z';
+const ESQUELETO: Pieza[] = [
+  { forma: elipse(50, 14, 8, 9.5) }, // cabeza
+  { forma: rect(45.5, 21, 9, 7, 2) }, // cuello
+  { forma: rect(36, 30, 28, 46, 8) }, // masa del torso
+  { forma: rect(39, 74, 22, 12, 5) }, // cadera
+  { forma: elipse(23, 90, 4, 4) }, // mano izquierda
+  { forma: elipse(77, 90, 4, 4) }, // mano derecha
+  { forma: elipse(43.5, 128, 6, 5) }, // rodilla izquierda
+  { forma: elipse(56.5, 128, 6, 5) }, // rodilla derecha
+  { forma: rect(38, 172, 11, 7, 3) }, // pie izquierdo
+  { forma: rect(51, 172, 11, 7, 3) }, // pie derecho
+];
 
-const FRONTAL: Regiones = {
-  pectorals: [
-    { tipo: 'elipse', cx: 43, cy: 50, rx: 8, ry: 6 },
-    { tipo: 'elipse', cx: 57, cy: 50, rx: 8, ry: 6 },
-  ],
-  delts: [
-    { tipo: 'elipse', cx: 31, cy: 44, rx: 6, ry: 7 },
-    { tipo: 'elipse', cx: 69, cy: 44, rx: 6, ry: 7 },
-  ],
-  biceps: [
-    { tipo: 'elipse', cx: 28, cy: 60, rx: 4.5, ry: 9 },
-    { tipo: 'elipse', cx: 72, cy: 60, rx: 4.5, ry: 9 },
-  ],
-  forearms: [
-    { tipo: 'elipse', cx: 26, cy: 78, rx: 4, ry: 9 },
-    { tipo: 'elipse', cx: 74, cy: 78, rx: 4, ry: 9 },
-  ],
-  abs: [{ tipo: 'rect', x: 44, y: 60, ancho: 12, alto: 24, radio: 4 }],
-  quads: [
-    { tipo: 'elipse', cx: 44, cy: 128, rx: 7, ry: 20 },
-    { tipo: 'elipse', cx: 56, cy: 128, rx: 7, ry: 20 },
-  ],
-  calves: [
-    { tipo: 'elipse', cx: 44, cy: 176, rx: 5.5, ry: 15 },
-    { tipo: 'elipse', cx: 56, cy: 176, rx: 5.5, ry: 15 },
-  ],
-};
+const BRAZOS_COMUNES: Pieza[] = [
+  { musculo: 'forearms', forma: elipse(22.5, 74, 4.5, 12) },
+  { musculo: 'forearms', forma: elipse(77.5, 74, 4.5, 12) },
+];
 
-const POSTERIOR: Regiones = {
-  traps: [{ tipo: 'rect', x: 41, y: 33, ancho: 18, alto: 11, radio: 5 }],
-  delts: [
-    { tipo: 'elipse', cx: 31, cy: 44, rx: 6, ry: 7 },
-    { tipo: 'elipse', cx: 69, cy: 44, rx: 6, ry: 7 },
-  ],
-  'upper-back': [{ tipo: 'rect', x: 39, y: 46, ancho: 22, alto: 11, radio: 4 }],
-  lats: [
-    { tipo: 'elipse', cx: 40, cy: 66, rx: 7, ry: 13 },
-    { tipo: 'elipse', cx: 60, cy: 66, rx: 7, ry: 13 },
-  ],
-  triceps: [
-    { tipo: 'elipse', cx: 28, cy: 60, rx: 4.5, ry: 9 },
-    { tipo: 'elipse', cx: 72, cy: 60, rx: 4.5, ry: 9 },
-  ],
-  forearms: [
-    { tipo: 'elipse', cx: 26, cy: 78, rx: 4, ry: 9 },
-    { tipo: 'elipse', cx: 74, cy: 78, rx: 4, ry: 9 },
-  ],
-  glutes: [
-    { tipo: 'elipse', cx: 44, cy: 98, rx: 8, ry: 8 },
-    { tipo: 'elipse', cx: 56, cy: 98, rx: 8, ry: 8 },
-  ],
-  hamstrings: [
-    { tipo: 'elipse', cx: 44, cy: 130, rx: 7, ry: 18 },
-    { tipo: 'elipse', cx: 56, cy: 130, rx: 7, ry: 18 },
-  ],
-  calves: [
-    { tipo: 'elipse', cx: 44, cy: 176, rx: 5.5, ry: 15 },
-    { tipo: 'elipse', cx: 56, cy: 176, rx: 5.5, ry: 15 },
-  ],
-};
+const PIERNAS_COMUNES: Pieza[] = [
+  { musculo: 'calves', forma: elipse(43.5, 150, 6.5, 17) },
+  { musculo: 'calves', forma: elipse(56.5, 150, 6.5, 17) },
+];
+
+const FRONTAL: Pieza[] = [
+  ...ESQUELETO,
+  { musculo: 'delts', forma: elipse(32.5, 36, 7, 7.5) },
+  { musculo: 'delts', forma: elipse(67.5, 36, 7, 7.5) },
+  { musculo: 'pectorals', forma: elipse(43.5, 44, 8, 7) },
+  { musculo: 'pectorals', forma: elipse(56.5, 44, 8, 7) },
+  { musculo: 'abs', forma: rect(43, 54, 14, 20, 5) },
+  { musculo: 'biceps', forma: elipse(26, 52, 5, 11) },
+  { musculo: 'biceps', forma: elipse(74, 52, 5, 11) },
+  ...BRAZOS_COMUNES,
+  { musculo: 'quads', forma: elipse(43.5, 104, 8.5, 21) },
+  { musculo: 'quads', forma: elipse(56.5, 104, 8.5, 21) },
+  ...PIERNAS_COMUNES,
+];
+
+const POSTERIOR: Pieza[] = [
+  ...ESQUELETO,
+  { musculo: 'traps', forma: rect(41, 29, 18, 13, 6) },
+  { musculo: 'delts', forma: elipse(32.5, 36, 7, 7.5) },
+  { musculo: 'delts', forma: elipse(67.5, 36, 7, 7.5) },
+  { musculo: 'upper-back', forma: rect(38.5, 44, 23, 12, 5) },
+  { musculo: 'lats', forma: elipse(40.5, 63, 8, 12) },
+  { musculo: 'lats', forma: elipse(59.5, 63, 8, 12) },
+  { musculo: 'triceps', forma: elipse(26, 52, 5, 11) },
+  { musculo: 'triceps', forma: elipse(74, 52, 5, 11) },
+  ...BRAZOS_COMUNES,
+  { musculo: 'glutes', forma: elipse(44, 84, 9, 9) },
+  { musculo: 'glutes', forma: elipse(56, 84, 9, 9) },
+  { musculo: 'hamstrings', forma: elipse(43.5, 106, 8.5, 19) },
+  { musculo: 'hamstrings', forma: elipse(56.5, 106, 8.5, 19) },
+  ...PIERNAS_COMUNES,
+];
 
 export type VistaSilueta = 'frontal' | 'posterior';
 
+function musculosDe(piezas: Pieza[]): Musculo[] {
+  return piezas.flatMap((pieza) => (pieza.musculo ? [pieza.musculo] : []));
+}
+
 /** Elige la vista que muestra más de los músculos del día. */
 export function vistaPara(musculos: Musculo[]): VistaSilueta {
-  const cuenta = (regiones: Regiones): number =>
-    musculos.filter((musculo) => regiones[musculo] !== undefined).length;
+  const cuenta = (piezas: Pieza[]): number => {
+    const disponibles = new Set(musculosDe(piezas));
+    return musculos.filter((musculo) => disponibles.has(musculo)).length;
+  };
   return cuenta(POSTERIOR) > cuenta(FRONTAL) ? 'posterior' : 'frontal';
 }
 
@@ -101,9 +118,11 @@ export function SiluetaMuscular({
   vista,
   ancho = 140,
 }: PropiedadesSilueta) {
-  const regiones = vista === 'frontal' ? FRONTAL : POSTERIOR;
+  const piezas = vista === 'frontal' ? FRONTAL : POSTERIOR;
+  const vistos = new Map<Musculo, number>();
 
-  const colorDe = (musculo: Musculo): string => {
+  const colorDe = (musculo?: Musculo): string => {
+    if (!musculo) return colores.superficieAlta;
     if (principales.includes(musculo)) return colores.musculoPrincipal;
     if (secundarios.includes(musculo)) return colores.musculoSecundario;
     return colores.musculoInactivo;
@@ -111,36 +130,44 @@ export function SiluetaMuscular({
 
   return (
     <Svg width={ancho} height={(ancho * 220) / 100} viewBox="0 0 100 220">
-      <Path d={CONTORNO} fill={colores.superficieAlta} />
-      {Object.entries(regiones).flatMap(([musculo, formas]) =>
-        (formas ?? []).map((forma, indice) => {
-          const identificador = `region-${musculo}-${indice}`;
-          const relleno = colorDe(musculo as Musculo);
+      {piezas.map((pieza, posicion) => {
+        let identificador = `pieza-${posicion}`;
+        if (pieza.musculo) {
+          const indice = vistos.get(pieza.musculo) ?? 0;
+          vistos.set(pieza.musculo, indice + 1);
+          identificador = `region-${pieza.musculo}-${indice}`;
+        }
 
-          return forma.tipo === 'elipse' ? (
-            <Ellipse
-              key={identificador}
-              testID={identificador}
-              cx={forma.cx}
-              cy={forma.cy}
-              rx={forma.rx}
-              ry={forma.ry}
-              fill={relleno}
-            />
-          ) : (
-            <Rect
-              key={identificador}
-              testID={identificador}
-              x={forma.x}
-              y={forma.y}
-              width={forma.ancho}
-              height={forma.alto}
-              rx={forma.radio}
-              fill={relleno}
-            />
-          );
-        }),
-      )}
+        const relleno = colorDe(pieza.musculo);
+        const { forma } = pieza;
+
+        return forma.tipo === 'elipse' ? (
+          <Ellipse
+            key={identificador}
+            testID={identificador}
+            cx={forma.cx}
+            cy={forma.cy}
+            rx={forma.rx}
+            ry={forma.ry}
+            fill={relleno}
+            stroke={colores.fondo}
+            strokeWidth={0.9}
+          />
+        ) : (
+          <Rect
+            key={identificador}
+            testID={identificador}
+            x={forma.x}
+            y={forma.y}
+            width={forma.ancho}
+            height={forma.alto}
+            rx={forma.radio}
+            fill={relleno}
+            stroke={colores.fondo}
+            strokeWidth={0.9}
+          />
+        );
+      })}
     </Svg>
   );
 }

@@ -6,6 +6,7 @@ import { Boton } from '@/ui/componentes/Boton';
 import { BarraProgreso } from '@/ui/componentes/BarraProgreso';
 import { SiluetaMuscular, vistaPara } from '@/ui/componentes/SiluetaMuscular';
 import { colores, espaciado, radio, tipografia } from '@/ui/tema';
+import { nombreMusculo } from '@/ui/nombres';
 import { duracionEstimadaMin, siguienteDia } from '@/domain/planner/agenda';
 import type { DiaGuardado } from '@/data/db/repos/programa';
 import type { Reto } from '@/data/db/repos/retos';
@@ -124,12 +125,30 @@ export default function Hoy() {
               vista={vistaPara(dia.musculos)}
               ancho={110}
             />
-            <View style={{ gap: espaciado.xs, flex: 1 }}>
+            <View style={{ gap: espaciado.sm, flex: 1 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: espaciado.xs }}>
+                {dia.musculos.map((musculo) => (
+                  <Text
+                    key={musculo}
+                    style={{
+                      ...tipografia.tenue,
+                      color: colores.acentoTexto,
+                      backgroundColor: colores.acento,
+                      paddingHorizontal: espaciado.sm,
+                      paddingVertical: 2,
+                      borderRadius: radio.sm,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    {nombreMusculo(musculo)}
+                  </Text>
+                ))}
+              </View>
               <Text style={tipografia.cuerpo}>{dia.ejercicios.length} ejercicios</Text>
               <Text style={tipografia.tenue}>
-                {dia.ejercicios.reduce((suma, e) => suma + e.series, 0)} series
+                {dia.ejercicios.reduce((suma, e) => suma + e.series, 0)} series · ~
+                {duracionEstimadaMin(dia)} min
               </Text>
-              <Text style={tipografia.tenue}>~{duracionEstimadaMin(dia)} min</Text>
             </View>
           </View>
 

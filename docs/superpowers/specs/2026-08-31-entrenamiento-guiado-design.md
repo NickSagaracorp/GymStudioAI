@@ -519,6 +519,7 @@ mi plan, tamaño y borrado de la caché, exportar datos a JSON.
 | Ancla que el usuario no puede hacer | Se puede sustituir por otro ejercicio del mismo músculo desde la sesión; la sustitución se guarda para el resto del mesociclo |
 | Sin banco o sin barra de dominadas | El motor usa la alternativa declarada en la tabla de anclas |
 | Migración de esquema | Migraciones numeradas y transaccionales; un fallo deja la versión anterior intacta |
+| Ejecución dentro de Expo Go | No se programa el aviso semanal: expo-notifications lanza una excepción al importarse en Android desde el SDK 53. La tarjeta "Toca pesarte" de la pantalla de inicio sigue apareciendo |
 
 ## 14. Pruebas
 

@@ -9,6 +9,7 @@ import { GifEjercicio } from '@/ui/componentes/GifEjercicio';
 import { TablaSeries } from '@/ui/componentes/TablaSeries';
 import type { SerieConfirmada } from '@/ui/componentes/TablaSeries';
 import { colores, espaciado, radio, tipografia } from '@/ui/tema';
+import { nombreMusculo } from '@/ui/nombres';
 import { calcularMeta } from '@/domain/planner/progresion';
 import type { EjercicioDia, Meta } from '@/domain/planner/tipos';
 import type { Perfil } from '@/data/db/repos/perfil';
@@ -161,7 +162,7 @@ export default function PantallaSesion() {
                     backgroundColor: colores.acento,
                   }}
                 >
-                  {ficha.musculo}
+                  {nombreMusculo(ficha.musculo)}
                 </Text>
                 {ficha.musculosSecundarios.map((musculo) => (
                   <Text
@@ -172,7 +173,7 @@ export default function PantallaSesion() {
                       backgroundColor: colores.superficieAlta,
                     }}
                   >
-                    {musculo}
+                    {nombreMusculo(musculo)}
                   </Text>
                 ))}
               </View>
@@ -185,6 +186,7 @@ export default function PantallaSesion() {
 
               <TablaSeries
                 meta={meta}
+                conCarga={item.equipamiento !== 'bodyweight'}
                 registradas={hechas[item.ejercicioId] ?? []}
                 onConfirmar={(serie) => confirmar(item, serie)}
               />

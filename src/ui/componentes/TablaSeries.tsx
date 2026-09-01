@@ -32,10 +32,17 @@ const campo = {
  */
 export function TablaSeries({
   meta,
+  conCarga,
   registradas,
   onConfirmar,
 }: {
   meta: Meta;
+  /**
+   * Si el ejercicio lleva peso. No se puede deducir de `meta.pesoMeta`: la
+   * primera vez con un ejercicio de mancuerna la meta de peso es null porque
+   * aún no se conoce, y aun así hay que pedirlo.
+   */
+  conCarga: boolean;
   registradas: SerieConfirmada[];
   onConfirmar: (serie: SerieConfirmada) => void;
 }) {
@@ -72,15 +79,19 @@ export function TablaSeries({
             <Text style={{ ...tipografia.tenue, width: 18 }}>{numero}</Text>
 
             <Text testID={`meta-${numero}`} style={{ ...tipografia.tenue, width: 92 }}>
-              {meta.pesoMeta === null
+              {!conCarga
                 ? `${meta.repsMeta} reps`
-                : `${meta.pesoMeta} kg × ${meta.repsMeta}`}
+                : meta.pesoMeta === null
+                  ? `? kg × ${meta.repsMeta}`
+                  : `${meta.pesoMeta} kg × ${meta.repsMeta}`}
             </Text>
 
-            {meta.pesoMeta !== null && (
+            {conCarga && (
               <TextInput
                 testID={`peso-${numero}`}
                 keyboardType="decimal-pad"
+                placeholder="kg"
+                placeholderTextColor={colores.textoTenue}
                 value={pesoDe(numero)}
                 onChangeText={(texto) => setPesos({ ...pesos, [numero]: texto })}
                 style={campo}
@@ -101,7 +112,7 @@ export function TablaSeries({
               onPress={() =>
                 onConfirmar({
                   numero,
-                  pesoLogrado: meta.pesoMeta === null ? null : aNumero(pesoDe(numero)),
+                  pesoLogrado: conCarga ? aNumero(pesoDe(numero)) : null,
                   repsLogradas: aNumero(repsDe(numero)) ?? 0,
                 })
               }
