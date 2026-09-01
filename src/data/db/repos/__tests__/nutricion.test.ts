@@ -55,26 +55,21 @@ describe('migración de nutrición', () => {
     for (const sentencia of MIGRACIONES[0] ?? []) await adaptador.ejecutar(sentencia);
     await adaptador.ejecutar('PRAGMA user_version = 1');
 
-    const perfil = repoPerfil(adaptador);
-    await perfil.guardar({
-      nombre: 'Nick',
-      sexo: 'hombre',
-      fechaNac: '1988-04-12',
-      alturaCm: 178,
-      nivel: 'intermedio',
-      objetivo: 'volumen',
-      diasPorSemana: 4,
-      mancuernaMinKg: 2,
-      mancuernaMaxKg: 30,
-      incrementoKg: 2,
-      tieneBanco: true,
-      tieneBarraDominadas: false,
-      diaMedicion: 0,
-    });
+    // Se inserta con el SQL de la 001, tal y como lo haría la fase 1.
+    await adaptador.ejecutar(
+      `INSERT INTO perfil (
+         id, nombre, sexo, fecha_nac, altura_cm, nivel, objetivo, dias_por_semana,
+         mancuerna_min_kg, mancuerna_max_kg, incremento_kg, tiene_banco,
+         tiene_barra_dominadas, dia_medicion, creado_en
+       ) VALUES (1, 'Nick', 'hombre', '1988-04-12', 178, 'intermedio', 'volumen', 4,
+                 2, 30, 2, 1, 0, 0, '2026-08-31T00:00:00.000Z')`,
+    );
 
     await migrar(adaptador);
 
-    expect((await perfil.obtener())?.nombre).toBe('Nick');
+    const perfil = await repoPerfil(adaptador).obtener();
+    expect(perfil?.nombre).toBe('Nick');
+    expect(perfil?.nivelActividad).toBe('moderado');
     const filas = await adaptador.consultar<{ nivel_actividad: string }>(
       'SELECT nivel_actividad FROM perfil WHERE id = 1',
     );

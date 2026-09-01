@@ -16,6 +16,7 @@ const PERFIL: Perfil = {
   tieneBanco: true,
   tieneBarraDominadas: true,
   diaMedicion: 0,
+  nivelActividad: 'moderado',
 };
 
 const CON_CARGA: EjercicioDia = {

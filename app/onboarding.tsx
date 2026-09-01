@@ -7,6 +7,8 @@ import { CampoNumero } from '@/ui/componentes/CampoNumero';
 import { colores, espaciado, radio, tipografia } from '@/ui/tema';
 import { generarPrograma } from '@/domain/planner/programa';
 import { programarAvisoMedicion } from '@/services/avisos';
+import { calcularObjetivo } from '@/domain/nutricion/objetivos';
+import type { NivelActividad } from '@/domain/nutricion/tipos';
 import type { Nivel, Objetivo, Perfil } from '@/data/db/repos/perfil';
 
 const OBJETIVOS: { valor: Objetivo; etiqueta: string }[] = [
@@ -22,6 +24,22 @@ const NIVELES: { valor: Nivel; etiqueta: string }[] = [
 ];
 
 const DIAS_SEMANA = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
+const SEXOS: { valor: Perfil['sexo']; etiqueta: string }[] = [
+  { valor: 'hombre', etiqueta: 'Hombre' },
+  { valor: 'mujer', etiqueta: 'Mujer' },
+  { valor: 'otro', etiqueta: 'Otro' },
+];
+
+const ACTIVIDADES: { valor: NivelActividad; etiqueta: string }[] = [
+  { valor: 'sedentario', etiqueta: 'Sedentario' },
+  { valor: 'ligero', etiqueta: 'Ligero' },
+  { valor: 'moderado', etiqueta: 'Moderado' },
+  { valor: 'alto', etiqueta: 'Alto' },
+  { valor: 'muy_alto', etiqueta: 'Muy alto' },
+];
+
+const ANIO_ACTUAL = new Date().getFullYear();
 
 function Opciones<T extends string | number>({
   valores,
@@ -64,10 +82,14 @@ function Opciones<T extends string | number>({
 }
 
 export default function Onboarding() {
-  const { perfil: repoPerfilApp, programa, catalogo } = useApp();
+  const { perfil: repoPerfilApp, programa, catalogo, mediciones, nutricion } = useApp();
 
   const [nombre, setNombre] = useState('');
+  const [sexo, setSexo] = useState<Perfil['sexo']>('hombre');
+  const [anioNac, setAnioNac] = useState<number | null>(ANIO_ACTUAL - 30);
   const [alturaCm, setAlturaCm] = useState<number | null>(175);
+  const [pesoKg, setPesoKg] = useState<number | null>(75);
+  const [nivelActividad, setNivelActividad] = useState<NivelActividad>('moderado');
   const [objetivo, setObjetivo] = useState<Objetivo>('volumen');
   const [nivel, setNivel] = useState<Nivel>('principiante');
   const [diasPorSemana, setDiasPorSemana] = useState(3);
@@ -82,6 +104,10 @@ export default function Onboarding() {
   const listo =
     nombre.trim().length > 0 &&
     alturaCm !== null &&
+    pesoKg !== null &&
+    anioNac !== null &&
+    anioNac > 1900 &&
+    anioNac <= ANIO_ACTUAL - 12 &&
     mancuernaMinKg !== null &&
     mancuernaMaxKg !== null &&
     incrementoKg !== null &&
@@ -93,8 +119,8 @@ export default function Onboarding() {
 
     const nuevo: Perfil = {
       nombre: nombre.trim(),
-      sexo: 'otro',
-      fechaNac: '1990-01-01',
+      sexo,
+      fechaNac: `${anioNac}-01-01`,
       alturaCm: alturaCm as number,
       nivel,
       objetivo,
@@ -105,9 +131,29 @@ export default function Onboarding() {
       tieneBanco,
       tieneBarraDominadas,
       diaMedicion,
+      nivelActividad,
     };
 
     await repoPerfilApp.guardar(nuevo);
+
+    // El peso inicial arranca la gráfica de progreso desde el primer día.
+    await mediciones.guardar({
+      fecha: new Date().toISOString().slice(0, 10),
+      pesoKg: pesoKg as number,
+      notas: null,
+      medidas: {},
+    });
+
+    await nutricion.guardarObjetivo(
+      calcularObjetivo({
+        sexo,
+        fechaNac: nuevo.fechaNac,
+        alturaCm: nuevo.alturaCm,
+        pesoKg: pesoKg as number,
+        nivelActividad,
+        objetivo,
+      }),
+    );
     const plan = generarPrograma(nuevo, catalogo, `${nuevo.objetivo}-${Date.now()}`);
     await programa.guardar(plan);
     await programarAvisoMedicion(diaMedicion);
@@ -141,6 +187,21 @@ export default function Onboarding() {
         />
       </View>
 
+      <View style={{ gap: espaciado.sm }}>
+        <Text style={tipografia.seccion}>Sexo</Text>
+        <Text style={tipografia.tenue}>
+          Cambia la fórmula que calcula tu gasto calórico.
+        </Text>
+        <Opciones valores={SEXOS} seleccionado={sexo} onElegir={setSexo} prefijoTestID="sexo" />
+      </View>
+
+      <CampoNumero
+        etiqueta="Año de nacimiento"
+        valor={anioNac}
+        onCambio={setAnioNac}
+        testID="campo-anio"
+      />
+
       <CampoNumero
         etiqueta="Altura"
         sufijo="cm"
@@ -148,6 +209,27 @@ export default function Onboarding() {
         onCambio={setAlturaCm}
         testID="campo-altura"
       />
+
+      <CampoNumero
+        etiqueta="Peso actual"
+        sufijo="kg"
+        valor={pesoKg}
+        onCambio={setPesoKg}
+        testID="campo-peso"
+      />
+
+      <View style={{ gap: espaciado.sm }}>
+        <Text style={tipografia.seccion}>Actividad diaria</Text>
+        <Text style={tipografia.tenue}>
+          Sin contar los entrenamientos: cuánto te mueves en tu día a día.
+        </Text>
+        <Opciones
+          valores={ACTIVIDADES}
+          seleccionado={nivelActividad}
+          onElegir={setNivelActividad}
+          prefijoTestID="actividad"
+        />
+      </View>
 
       <View style={{ gap: espaciado.sm }}>
         <Text style={tipografia.seccion}>Objetivo</Text>

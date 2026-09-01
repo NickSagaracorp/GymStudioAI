@@ -17,6 +17,7 @@ const PERFIL: Perfil = {
   tieneBanco: true,
   tieneBarraDominadas: false,
   diaMedicion: 0,
+  nivelActividad: 'moderado',
 };
 
 describe('repositorio de perfil', () => {

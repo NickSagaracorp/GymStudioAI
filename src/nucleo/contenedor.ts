@@ -6,6 +6,7 @@ import { migrar } from '@/data/db/migraciones';
 import { repoMediciones } from '@/data/db/repos/mediciones';
 import { repoPerfil } from '@/data/db/repos/perfil';
 import { repoPrograma } from '@/data/db/repos/programa';
+import { repoNutricion } from '@/data/db/repos/nutricion';
 import { repoRetos } from '@/data/db/repos/retos';
 import { repoSesion } from '@/data/db/repos/sesion';
 import { crearCacheGifs } from '@/services/cacheGifs';
@@ -18,6 +19,7 @@ export interface Contenedor {
   sesion: ReturnType<typeof repoSesion>;
   mediciones: ReturnType<typeof repoMediciones>;
   retos: ReturnType<typeof repoRetos>;
+  nutricion: ReturnType<typeof repoNutricion>;
   cache: ReturnType<typeof crearCacheGifs>;
 }
 
@@ -43,6 +45,7 @@ export async function crearContenedor(): Promise<Contenedor> {
     sesion,
     mediciones: repoMediciones(adaptador),
     retos: repoRetos(adaptador),
+    nutricion: repoNutricion(adaptador),
     cache: crearCacheGifs(sistema, directorio),
   };
 }

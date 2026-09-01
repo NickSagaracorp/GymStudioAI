@@ -178,11 +178,7 @@ export default function Hoy() {
         </View>
       )}
 
-      <View style={{ gap: espaciado.sm }}>
-        <Boton titulo="Ver progreso" variante="secundario" onPress={() => router.push('/progreso')} />
-        <Boton titulo="Mis retos" variante="secundario" onPress={() => router.push('/retos')} />
-        <Boton titulo="Ajustes" variante="secundario" onPress={() => router.push('/ajustes')} />
-      </View>
+      <Boton titulo="Mis retos" variante="secundario" onPress={() => router.push('/retos')} />
     </ScrollView>
   );
 }

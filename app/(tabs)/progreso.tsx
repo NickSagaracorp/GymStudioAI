@@ -84,7 +84,6 @@ export default function Progreso() {
       })}
 
       <Boton titulo="Registrar medidas" onPress={() => router.push('/medicion')} />
-      <Boton titulo="Volver" variante="secundario" onPress={() => router.back()} />
     </ScrollView>
   );
 }

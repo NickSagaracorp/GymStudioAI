@@ -1,4 +1,5 @@
 import type { Adaptador } from '../adaptador';
+import type { NivelActividad } from '@/domain/nutricion/tipos';
 
 export type Nivel = 'principiante' | 'intermedio' | 'avanzado';
 export type Objetivo = 'volumen' | 'definicion' | 'fuerza';
@@ -19,6 +20,7 @@ export interface Perfil {
   tieneBarraDominadas: boolean;
   /** 0 = domingo, 6 = sábado. */
   diaMedicion: number;
+  nivelActividad: NivelActividad;
 }
 
 interface FilaPerfil {
@@ -35,6 +37,7 @@ interface FilaPerfil {
   tiene_banco: number;
   tiene_barra_dominadas: number;
   dia_medicion: number;
+  nivel_actividad: NivelActividad | null;
 }
 
 export function repoPerfil(adaptador: Adaptador) {
@@ -58,6 +61,7 @@ export function repoPerfil(adaptador: Adaptador) {
         tieneBanco: fila.tiene_banco === 1,
         tieneBarraDominadas: fila.tiene_barra_dominadas === 1,
         diaMedicion: fila.dia_medicion,
+        nivelActividad: fila.nivel_actividad ?? 'moderado',
       };
     },
 
@@ -66,8 +70,8 @@ export function repoPerfil(adaptador: Adaptador) {
         `INSERT INTO perfil (
            id, nombre, sexo, fecha_nac, altura_cm, nivel, objetivo, dias_por_semana,
            mancuerna_min_kg, mancuerna_max_kg, incremento_kg, tiene_banco,
-           tiene_barra_dominadas, dia_medicion, creado_en
-         ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           tiene_barra_dominadas, dia_medicion, nivel_actividad, creado_en
+         ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            nombre = excluded.nombre,
            sexo = excluded.sexo,
@@ -81,7 +85,8 @@ export function repoPerfil(adaptador: Adaptador) {
            incremento_kg = excluded.incremento_kg,
            tiene_banco = excluded.tiene_banco,
            tiene_barra_dominadas = excluded.tiene_barra_dominadas,
-           dia_medicion = excluded.dia_medicion`,
+           dia_medicion = excluded.dia_medicion,
+           nivel_actividad = excluded.nivel_actividad`,
         [
           perfil.nombre,
           perfil.sexo,
@@ -96,6 +101,7 @@ export function repoPerfil(adaptador: Adaptador) {
           perfil.tieneBanco ? 1 : 0,
           perfil.tieneBarraDominadas ? 1 : 0,
           perfil.diaMedicion,
+          perfil.nivelActividad,
           new Date().toISOString(),
         ],
       );

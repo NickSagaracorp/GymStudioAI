@@ -19,6 +19,7 @@ const PERFIL: Perfil = {
   tieneBanco: true,
   tieneBarraDominadas: true,
   diaMedicion: 0,
+  nivelActividad: 'moderado',
 };
 
 const catalogo = crearCatalogo(ejerciciosReales as Ejercicio[]);
