@@ -14,19 +14,47 @@ const MUSCULOS = [
   'upper-back',
 ];
 
+// La categoría "strength" del catálogo origen no basta: cuela halterofilia,
+// ejercicios de agilidad, calistenia de élite y material que no tenemos.
 const PALABRAS_EXCLUIDAS = [
+  // Material inestable o accesorios que no se asumen disponibles.
   'bosu',
   'exercise-ball',
   'stability',
-  'stork',
-  'bowling',
-  'v-sit',
+  'balance-board',
   'arm-blaster',
+  'stork',
+  'v-sit',
+  // Halterofilia y movimientos técnicos que no se autoprograman.
+  'snatch',
+  'jerk',
+  'clean',
+  'muscle-up',
+  'bowling',
+  // Agilidad y desplazamientos, no trabajo de fuerza por series.
+  'quick-feet',
+  'farmers-walk',
+  'inchworm',
+  // Calistenia de élite: no es material de un plan generado.
+  'planche',
+  'maltese',
+  'front-lever',
+  'back-lever',
+  'iron-cross',
+  // Estiramientos y posturas de yoga marcados como "strength" en el origen.
+  'stretch',
+  '-pose',
 ];
+
+// Entradas concretas del catálogo que no describen un ejercicio real.
+const SLUGS_EXCLUIDOS = ['flag', 'potty-squat', 'assisted-prone-hamstring'];
 
 function esUtilizable(bruto) {
   if (bruto.category !== 'strength') return false;
   if (!MUSCULOS.includes(bruto.muscle)) return false;
+  // Entradas comodín tipo "quads/quads", que no son un ejercicio.
+  if (bruto.slug === bruto.muscle) return false;
+  if (SLUGS_EXCLUIDOS.includes(bruto.slug)) return false;
   return !PALABRAS_EXCLUIDAS.some((palabra) => bruto.slug.includes(palabra));
 }
 
@@ -44,4 +72,4 @@ function aEjercicio(bruto, base) {
   };
 }
 
-module.exports = { MUSCULOS, PALABRAS_EXCLUIDAS, esUtilizable, aEjercicio };
+module.exports = { MUSCULOS, PALABRAS_EXCLUIDAS, SLUGS_EXCLUIDOS, esUtilizable, aEjercicio };

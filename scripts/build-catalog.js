@@ -71,6 +71,16 @@ async function main() {
     }
   }
 
+  // Las miniaturas de ejercicios que ya no pasan el filtro no deben viajar en el binario.
+  const vigentes = new Set(ejercicios.map((e) => `${e.miniatura}.webp`));
+  let huerfanas = 0;
+  for (const fichero of fs.readdirSync(DIR_THUMBS)) {
+    if (fichero.endsWith('.webp') && !vigentes.has(fichero)) {
+      fs.unlinkSync(path.join(DIR_THUMBS, fichero));
+      huerfanas += 1;
+    }
+  }
+
   const lineas = ejercicios.map(
     (e) => `  '${e.miniatura}': require('./${e.miniatura}.webp'),`,
   );
@@ -81,7 +91,9 @@ async function main() {
     'utf8',
   );
 
-  console.log(`${ejercicios.length} ejercicios, ${descargadas} miniaturas nuevas.`);
+  console.log(
+    `${ejercicios.length} ejercicios, ${descargadas} miniaturas nuevas, ${huerfanas} huérfanas borradas.`,
+  );
 }
 
 main().catch((error) => {

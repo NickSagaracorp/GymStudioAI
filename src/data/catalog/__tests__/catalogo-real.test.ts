@@ -6,8 +6,8 @@ import type { Ejercicio } from '../tipos';
 const catalogo = crearCatalogo(ejercicios as Ejercicio[]);
 
 describe('catálogo real generado', () => {
-  it('contiene 566 ejercicios', () => {
-    expect(catalogo.todos()).toHaveLength(566);
+  it('contiene 536 ejercicios', () => {
+    expect(catalogo.todos()).toHaveLength(536);
   });
 
   it('cubre los trece músculos con al menos un ejercicio', () => {

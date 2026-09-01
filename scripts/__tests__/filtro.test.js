@@ -50,3 +50,50 @@ describe('aEjercicio', () => {
     });
   });
 });
+
+describe('ruido del catálogo origen', () => {
+  const bruto = (slug, muscle = 'quads') => ({
+    ...base,
+    slug,
+    muscle,
+    id: `${muscle}/${slug}`,
+  });
+
+  it('rechaza entradas comodín cuyo slug es el propio músculo', () => {
+    expect(esUtilizable(bruto('quads'))).toBe(false);
+  });
+
+  it('rechaza halterofilia y movimientos técnicos', () => {
+    expect(esUtilizable(bruto('snatch-pull'))).toBe(false);
+    expect(esUtilizable(bruto('squat-jerk'))).toBe(false);
+    expect(esUtilizable(bruto('dumbbell-clean', 'glutes'))).toBe(false);
+  });
+
+  it('rechaza agilidad, desplazamientos y calistenia de élite', () => {
+    expect(esUtilizable(bruto('quick-feet-v-2'))).toBe(false);
+    expect(esUtilizable(bruto('farmers-walk'))).toBe(false);
+    expect(esUtilizable(bruto('full-planche', 'abs'))).toBe(false);
+    expect(esUtilizable(bruto('flag', 'abs'))).toBe(false);
+  });
+
+  it('conserva los ejercicios legítimos de esos mismos músculos', () => {
+    expect(esUtilizable(bruto('sissy-squat'))).toBe(true);
+    expect(esUtilizable(bruto('split-squats'))).toBe(true);
+    expect(esUtilizable(bruto('crunch-floor', 'abs'))).toBe(true);
+  });
+});
+
+describe('estiramientos colados como fuerza', () => {
+  const bruto = (slug, muscle = 'hamstrings') => ({ ...base, slug, muscle, id: `${muscle}/${slug}` });
+
+  it('rechaza posturas de yoga y estiramientos', () => {
+    expect(esUtilizable(bruto('reclining-big-toe-pose-with-rope'))).toBe(false);
+    expect(esUtilizable(bruto('seated-wide-angle-pose-sequence'))).toBe(false);
+    expect(esUtilizable(bruto('assisted-prone-hamstring'))).toBe(false);
+  });
+
+  it('conserva los curls femorales reales', () => {
+    expect(esUtilizable(bruto('inverse-leg-curl-bench-support'))).toBe(true);
+    expect(esUtilizable(bruto('glute-ham-raise'))).toBe(true);
+  });
+});
