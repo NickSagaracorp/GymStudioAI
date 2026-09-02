@@ -1,13 +1,16 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { useApp } from '@/ui/ContextoApp';
 import { Boton } from '@/ui/componentes/Boton';
 import { BarraProgreso } from '@/ui/componentes/BarraProgreso';
 import { SiluetaMuscular, vistaPara } from '@/ui/componentes/SiluetaMuscular';
+import { MarcadorSemanal } from '@/ui/componentes/MarcadorSemanal';
 import { colores, espaciado, radio, tipografia } from '@/ui/tema';
 import { nombreMusculo } from '@/ui/nombres';
 import { duracionEstimadaMin, siguienteDia } from '@/domain/planner/agenda';
+import { calcularRacha, semanaDe } from '@/domain/gamificacion/racha';
+import { diaLocal } from '@/domain/gamificacion/fechas';
 import type { DiaGuardado } from '@/data/db/repos/programa';
 import type { Reto } from '@/data/db/repos/retos';
 import type { Perfil } from '@/data/db/repos/perfil';
@@ -28,6 +31,7 @@ export default function Hoy() {
   const [activos, setActivos] = useState<Reto[]>([]);
   const [datosPerfil, setDatosPerfil] = useState<Perfil | null>(null);
   const [tocaPesarse, setTocaPesarse] = useState(false);
+  const [diasEntrenados, setDiasEntrenados] = useState<string[]>([]);
   const [cargado, setCargado] = useState(false);
 
   useFocusEffect(
@@ -35,11 +39,12 @@ export default function Hoy() {
       let vivo = true;
 
       (async () => {
-        const [activo, hechos, listaRetos, miPerfil] = await Promise.all([
+        const [activo, hechos, listaRetos, miPerfil, fechasEntrenadas] = await Promise.all([
           programa.activo(),
           sesion.diasCompletados(),
           retos.activos(),
           perfil.obtener(),
+          sesion.fechasCompletadas(),
         ]);
         if (!vivo) return;
 
@@ -51,6 +56,7 @@ export default function Hoy() {
         setCompletados(hechos.filter((id) => dias.some((d) => d.id === id)).length);
         setActivos(listaRetos);
         setDatosPerfil(miPerfil);
+        setDiasEntrenados(fechasEntrenadas);
 
         if (miPerfil) {
           const hoy = new Date();
@@ -67,6 +73,15 @@ export default function Hoy() {
       };
     }, [programa, sesion, retos, perfil, mediciones]),
   );
+
+  const marcador = useMemo(() => {
+    const hoyLocal = diaLocal(new Date());
+    const agenda = datosPerfil?.diasSemana ?? [];
+    return {
+      dias: semanaDe(diasEntrenados, agenda, hoyLocal),
+      ...calcularRacha(diasEntrenados, agenda, hoyLocal),
+    };
+  }, [diasEntrenados, datosPerfil]);
 
   async function empezar() {
     if (!dia) return;
@@ -97,6 +112,10 @@ export default function Hoy() {
             {completados} de {totalDias} entrenamientos del programa
           </Text>
         )}
+      </View>
+
+      <View style={tarjeta}>
+        <MarcadorSemanal dias={marcador.dias} racha={marcador.actual} record={marcador.record} />
       </View>
 
       {tocaPesarse && (
