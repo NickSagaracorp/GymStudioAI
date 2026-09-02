@@ -1,12 +1,15 @@
-import { Dimensions, FlatList, Modal, Text, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import { Alert, Dimensions, FlatList, Modal, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/ui/ContextoApp';
-import { Boton } from '@/ui/componentes/Boton';
+import { BarraEjercicios } from '@/ui/componentes/BarraEjercicios';
 import { BarraProgreso } from '@/ui/componentes/BarraProgreso';
 import { CronometroDescanso } from '@/ui/componentes/CronometroDescanso';
 import { TarjetaEjercicio } from '@/ui/componentes/TarjetaEjercicio';
+import { ejercicioCompleto } from '@/domain/gamificacion/logros';
 import { useSesion } from '@/ui/hooks/useSesion';
 import { colores, espaciado, tipografia } from '@/ui/tema';
+import type { EjercicioDia } from '@/domain/planner/tipos';
 
 const ANCHO = Dimensions.get('window').width;
 
@@ -34,6 +37,56 @@ export default function PantallaSesion() {
     alternarDescendente,
   } = useSesion(identificador);
 
+  const lista = useRef<FlatList<EjercicioDia>>(null);
+  const [indice, setIndice] = useState(0);
+
+  const completos = useMemo(
+    () =>
+      ejercicios.map((ejercicio) =>
+        ejercicioCompleto({
+          esDescendente: descendentes.has(ejercicio.ejercicioId),
+          seriesRegistradas: (hechas[ejercicio.ejercicioId] ?? []).length,
+          seriesMeta: metas[ejercicio.ejercicioId]?.series ?? ejercicio.series,
+          bajadasRegistradas: (bajadas[ejercicio.ejercicioId] ?? []).length,
+        }),
+      ),
+    [ejercicios, descendentes, hechas, metas, bajadas],
+  );
+
+  function irA(destino: number) {
+    const limitado = Math.max(0, Math.min(ejercicios.length - 1, destino));
+    setIndice(limitado);
+    lista.current?.scrollToIndex({ index: limitado, animated: true });
+  }
+
+  function siguiente() {
+    if (completos[indice]) return irA(indice + 1);
+
+    const ficha = catalogo.porId(ejercicios[indice]?.ejercicioId ?? '');
+    Alert.alert(
+      'Te faltan series',
+      `Aún no has confirmado todas las series de ${ficha?.nombre ?? 'este ejercicio'}.`,
+      [
+        { text: 'Quedarme', style: 'cancel' },
+        { text: 'Seguir igual', onPress: () => irA(indice + 1) },
+      ],
+    );
+  }
+
+  function terminar() {
+    const pendientes = completos.filter((completo) => !completo).length;
+    if (pendientes === 0) return router.replace(`/resumen/${identificador}`);
+
+    Alert.alert(
+      'Quedan ejercicios',
+      `Te faltan ${pendientes} ${pendientes === 1 ? 'ejercicio' : 'ejercicios'} del día.`,
+      [
+        { text: 'Seguir entrenando', style: 'cancel' },
+        { text: 'Terminar igual', onPress: () => router.replace(`/resumen/${identificador}`) },
+      ],
+    );
+  }
+
   if (!datosPerfil || ejercicios.length === 0) {
     return <View style={{ flex: 1, backgroundColor: colores.fondo }} />;
   }
@@ -43,16 +96,20 @@ export default function PantallaSesion() {
       <View style={{ paddingHorizontal: espaciado.lg, gap: espaciado.sm }}>
         <Text style={tipografia.seccion}>{nombreDia}</Text>
         <Text style={tipografia.tenue}>
-          {seriesHechas} de {totalSeries} series
+          Ejercicio {indice + 1} de {ejercicios.length} · {seriesHechas} de {totalSeries} series
         </Text>
         <BarraProgreso valor={seriesHechas} total={totalSeries} />
       </View>
 
       <FlatList
+        ref={lista}
         data={ejercicios}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(evento) =>
+          setIndice(Math.round(evento.nativeEvent.contentOffset.x / ANCHO))
+        }
         keyExtractor={(item) => item.ejercicioId}
         renderItem={({ item }) => {
           const ficha = catalogo.porId(item.ejercicioId);
@@ -81,13 +138,15 @@ export default function PantallaSesion() {
         }}
       />
 
-      <View style={{ padding: espaciado.lg }}>
-        <Boton
-          testID="terminar-sesion"
-          titulo="Terminar entrenamiento"
-          onPress={() => router.replace(`/resumen/${identificador}`)}
-        />
-      </View>
+      <BarraEjercicios
+        total={ejercicios.length}
+        indice={indice}
+        completos={completos}
+        onAnterior={() => irA(indice - 1)}
+        onSiguiente={siguiente}
+        onTerminar={terminar}
+        onIrA={irA}
+      />
 
       <Modal visible={descanso !== null} transparent animationType="slide">
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: '#000000AA' }}>
