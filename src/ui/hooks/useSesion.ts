@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { useApp } from '@/ui/ContextoApp';
 import type { SerieConfirmada } from '@/ui/componentes/TablaSeries';
 import type { BajadaRegistrada } from '@/ui/componentes/TablaDescendente';
@@ -132,6 +133,7 @@ export function useSesion(identificador: number) {
         return { ...anterior, [ejercicio.ejercicioId]: [...lista, serie] };
       });
       setDescanso(ejercicio.descansoSeg);
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     },
     [identificador, metas, sesion],
   );
