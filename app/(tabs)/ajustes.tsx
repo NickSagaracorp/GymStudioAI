@@ -310,7 +310,8 @@ export default function Ajustes() {
 
       <Text style={tipografia.seccion}>Programa</Text>
 
-      <Text style={tipografia.seccion}>Qué días entrenas</Text>
+      <Text style={tipografia.cuerpo}>Qué días entrenas</Text>
+      <Text style={tipografia.tenue}>Entre 2 y 6 días. Tu racha solo cuenta estos días.</Text>
       {agenda.length > 0 && <SelectorDias seleccionados={agenda} onCambio={setAgenda} />}
       <Boton
         testID="guardar-agenda"
