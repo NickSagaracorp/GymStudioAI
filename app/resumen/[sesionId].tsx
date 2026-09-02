@@ -3,14 +3,20 @@ import { Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/ui/ContextoApp';
 import { Boton } from '@/ui/componentes/Boton';
+import { Celebracion } from '@/ui/componentes/Celebracion';
 import { colores, espaciado, radio, tipografia } from '@/ui/tema';
 import { cerrarSesion } from '@/nucleo/cerrarSesion';
 import type { ResumenSesion } from '@/nucleo/cerrarSesion';
+import { calcularRacha } from '@/domain/gamificacion/racha';
+import type { Racha } from '@/domain/gamificacion/racha';
+import { diaLocal } from '@/domain/gamificacion/fechas';
 
 export default function Resumen() {
   const { sesionId } = useLocalSearchParams<{ sesionId: string }>();
-  const { sesion, retos } = useApp();
+  const { sesion, retos, perfil, logros } = useApp();
   const [resumen, setResumen] = useState<ResumenSesion | null>(null);
+  const [racha, setRacha] = useState<Racha>({ actual: 0, record: 0 });
+  const [festejando, setFestejando] = useState(true);
 
   useEffect(() => {
     let vivo = true;
@@ -21,6 +27,28 @@ export default function Resumen() {
       vivo = false;
     };
   }, [sesionId, sesion, retos]);
+
+  // La dependencia en `resumen` importa: `cerrarSesion` es lo que marca la
+  // sesión como completada, y hasta que eso pasa `fechasCompletadas()` no
+  // incluye la de hoy.
+  useEffect(() => {
+    if (!resumen) return;
+    let vivo = true;
+
+    (async () => {
+      const [miPerfil, fechas] = await Promise.all([perfil.obtener(), sesion.fechasCompletadas()]);
+      if (!vivo || !miPerfil) return;
+      setRacha(calcularRacha(fechas, miPerfil.diasSemana, diaLocal(new Date())));
+    })();
+
+    return () => {
+      vivo = false;
+    };
+  }, [perfil, sesion, resumen]);
+
+  useEffect(() => {
+    if (racha.actual > 0) void logros.marcar(`racha:${racha.actual}`);
+  }, [racha, logros]);
 
   return (
     <View
@@ -63,7 +91,21 @@ export default function Resumen() {
         </View>
       ))}
 
+      {racha.actual > 0 && (
+        <Text testID="racha-resumen" style={tipografia.cuerpo}>
+          {`🔥 ${racha.actual} ${racha.actual === 1 ? 'día' : 'días'} de racha`}
+        </Text>
+      )}
+
       <Boton titulo="Volver a inicio" onPress={() => router.replace('/hoy')} />
+
+      <Celebracion
+        visible={resumen !== null && festejando}
+        nivel="grande"
+        titulo="¡Entrenamiento terminado!"
+        detalle={`${resumen?.seriesCompletadas ?? 0} series · ${Math.round(resumen?.volumenKg ?? 0)} kg`}
+        onCerrar={() => setFestejando(false)}
+      />
     </View>
   );
 }
