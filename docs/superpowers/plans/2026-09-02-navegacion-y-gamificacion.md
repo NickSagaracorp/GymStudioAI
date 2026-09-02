@@ -519,7 +519,12 @@ export function agendaPorDefecto(diasPorSemana: number): number[] {
 function leerAgenda(csv: string, diasPorSemana: number): number[] {
   const guardados = csv
     .split(',')
-    .map((trozo) => Number(trozo.trim()))
+    // Descartar los trozos vacíos es imprescindible: `Number('')` es 0, no NaN,
+    // así que un CSV vacío se colaría como "entrena solo los domingos" y nunca
+    // llegaría al reparto por defecto.
+    .map((trozo) => trozo.trim())
+    .filter((trozo) => trozo !== '')
+    .map((trozo) => Number(trozo))
     .filter((numero) => Number.isInteger(numero) && numero >= 0 && numero <= 6);
 
   return guardados.length > 0
@@ -586,8 +591,9 @@ al interfaz `Contenedor` y `logros: repoLogros(adaptador)` al objeto devuelto.
   - `perfil.test.ts`: añadir `diasSemana: [1, 2, 4, 5]` a la constante `PERFIL`;
     caso de ida y vuelta que comprueba `diasSemana`; caso que escribe
     `dias_semana = ''` con SQL directo sobre un perfil de `diasPorSemana: 3` y
-    espera `[1, 3, 5]` al leer; caso de `agendaPorDefecto(4)` → `[1, 2, 4, 5]` y
-    `agendaPorDefecto(9)` → `[1, 2, 3, 4, 5, 6]`.
+    espera `[1, 3, 5]` al leer; el mismo caso con basura y separadores sueltos
+    (`',,x,'`) también espera `[1, 3, 5]`; caso de `agendaPorDefecto(4)` →
+    `[1, 2, 4, 5]` y `agendaPorDefecto(9)` → `[1, 2, 3, 4, 5, 6]`.
   - `logros.test.ts`: marcar y leer con prefijo; marcar dos veces la misma clave
     no duplica ni lanza; `claves('sesion:7:')` no trae las de `sesion:70:`;
     prefijo sin resultados devuelve un conjunto vacío.

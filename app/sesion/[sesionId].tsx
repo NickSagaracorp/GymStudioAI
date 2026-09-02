@@ -1,210 +1,153 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dimensions, FlatList, Modal, ScrollView, Text, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Dimensions, FlatList, Modal, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useApp } from '@/ui/ContextoApp';
-import { Boton } from '@/ui/componentes/Boton';
+import { BarraEjercicios } from '@/ui/componentes/BarraEjercicios';
 import { BarraProgreso } from '@/ui/componentes/BarraProgreso';
+import { Celebracion } from '@/ui/componentes/Celebracion';
+import type { NivelCelebracion } from '@/ui/componentes/Celebracion';
 import { CronometroDescanso } from '@/ui/componentes/CronometroDescanso';
-import { GifEjercicio } from '@/ui/componentes/GifEjercicio';
-import { TablaSeries } from '@/ui/componentes/TablaSeries';
-import type { SerieConfirmada } from '@/ui/componentes/TablaSeries';
-import { TablaDescendente } from '@/ui/componentes/TablaDescendente';
-import type { BajadaRegistrada } from '@/ui/componentes/TablaDescendente';
-import { colores, espaciado, radio, tipografia } from '@/ui/tema';
+import { TarjetaEjercicio } from '@/ui/componentes/TarjetaEjercicio';
+import { ejercicioCompleto, hitosNuevos, prefijoSesion } from '@/domain/gamificacion/logros';
+import type { Hito } from '@/domain/gamificacion/logros';
 import { nombreMusculo } from '@/ui/nombres';
-import { calcularMeta } from '@/domain/planner/progresion';
-import { calcularMetaDescendente } from '@/domain/planner/descendentes';
-import type { EjercicioDia, Meta, MetaDescendente } from '@/domain/planner/tipos';
-import type { Perfil } from '@/data/db/repos/perfil';
+import { useSesion } from '@/ui/hooks/useSesion';
+import { colores, espaciado, tipografia } from '@/ui/tema';
+import type { EjercicioDia } from '@/domain/planner/tipos';
+import type { Musculo } from '@/data/catalog/tipos';
 
 const ANCHO = Dimensions.get('window').width;
-
-const chip = {
-  ...tipografia.tenue,
-  paddingHorizontal: espaciado.sm,
-  paddingVertical: espaciado.xs,
-  borderRadius: radio.sm,
-  overflow: 'hidden' as const,
-};
 
 export default function PantallaSesion() {
   const { sesionId } = useLocalSearchParams<{ sesionId: string }>();
   const identificador = Number(sesionId);
-  const { programa, sesion, catalogo, perfil, ejercicios: preferencias } = useApp();
+  const { catalogo, logros } = useApp();
 
-  const [ejercicios, setEjercicios] = useState<EjercicioDia[]>([]);
-  const [nombreDia, setNombreDia] = useState('');
-  const [metas, setMetas] = useState<Record<string, Meta>>({});
-  const [metasDescendentes, setMetasDescendentes] = useState<Record<string, MetaDescendente>>({});
-  const [descendentes, setDescendentes] = useState<Set<string>>(new Set());
-  const [hechas, setHechas] = useState<Record<string, SerieConfirmada[]>>({});
-  const [bajadas, setBajadas] = useState<Record<string, BajadaRegistrada[]>>({});
-  const [descanso, setDescanso] = useState<number | null>(null);
-  const [datosPerfil, setDatosPerfil] = useState<Perfil | null>(null);
+  const {
+    ejercicios,
+    nombreDia,
+    metas,
+    metasDescendentes,
+    descendentes,
+    hechas,
+    bajadas,
+    descanso,
+    setDescanso,
+    datosPerfil,
+    totalSeries,
+    seriesHechas,
+    confirmar,
+    confirmarBajada,
+    quitarBajada,
+    alternarDescendente,
+  } = useSesion(identificador);
+
+  const lista = useRef<FlatList<EjercicioDia>>(null);
+  const [indice, setIndice] = useState(0);
+  const [celebrados, setCelebrados] = useState<Set<string> | null>(null);
+  const [celebracion, setCelebracion] = useState<{
+    nivel: NivelCelebracion;
+    titulo: string;
+    detalle?: string;
+    musculo?: Musculo;
+  } | null>(null);
+
+  const completos = useMemo(
+    () =>
+      ejercicios.map((ejercicio) =>
+        ejercicioCompleto({
+          esDescendente: descendentes.has(ejercicio.ejercicioId),
+          seriesRegistradas: (hechas[ejercicio.ejercicioId] ?? []).length,
+          seriesMeta: metas[ejercicio.ejercicioId]?.series ?? ejercicio.series,
+          bajadasRegistradas: (bajadas[ejercicio.ejercicioId] ?? []).length,
+        }),
+      ),
+    [ejercicios, descendentes, hechas, metas, bajadas],
+  );
 
   useEffect(() => {
     let vivo = true;
-
-    (async () => {
-      const [miPerfil, activo] = await Promise.all([perfil.obtener(), programa.activo()]);
-      if (!miPerfil || !activo || !vivo) return;
-
-      const dias = await programa.diasDe(activo.id);
-      const borradores = await Promise.all(
-        dias.map(async (dia) => ({ dia, sesionId: (await sesion.borradorDe(dia.id))?.id })),
-      );
-      const encontrado = borradores.find((fila) => fila.sesionId === identificador)?.dia;
-      if (!encontrado || !vivo) return;
-
-      const marcados = new Set(await preferencias.descendentes());
-
-      const registradas = await sesion.seriesDe(identificador);
-      const porEjercicio: Record<string, SerieConfirmada[]> = {};
-      const porBajada: Record<string, BajadaRegistrada[]> = {};
-
-      for (const serie of registradas) {
-        if (marcados.has(serie.ejercicioId)) {
-          porBajada[serie.ejercicioId] = [
-            ...(porBajada[serie.ejercicioId] ?? []),
-            {
-              bajada: serie.bajada,
-              pesoLogrado: serie.pesoLogrado ?? 0,
-              repsLogradas: serie.repsLogradas,
-            },
-          ];
-        } else {
-          porEjercicio[serie.ejercicioId] = [
-            ...(porEjercicio[serie.ejercicioId] ?? []),
-            {
-              numero: serie.numero,
-              pesoLogrado: serie.pesoLogrado,
-              repsLogradas: serie.repsLogradas,
-            },
-          ];
-        }
-      }
-
-      const calculadas: Record<string, Meta> = {};
-      const calculadasDesc: Record<string, MetaDescendente> = {};
-
-      for (const ejercicio of encontrado.ejercicios) {
-        const historial = (await sesion.historialDe(ejercicio.ejercicioId)).filter(
-          (s) => s.sesionId !== identificador,
-        );
-
-        calculadas[ejercicio.ejercicioId] = calcularMeta(historial, ejercicio, miPerfil);
-        calculadasDesc[ejercicio.ejercicioId] = calcularMetaDescendente(
-          historial,
-          ejercicio.ejercicioId,
-          miPerfil,
-        );
-      }
-
-      if (!vivo) return;
-      setDatosPerfil(miPerfil);
-      setNombreDia(`Semana ${encontrado.semana} · ${encontrado.nombre}`);
-      setEjercicios(encontrado.ejercicios);
-      setMetas(calculadas);
-      setMetasDescendentes(calculadasDesc);
-      setDescendentes(marcados);
-      setHechas(porEjercicio);
-      setBajadas(porBajada);
-    })();
-
+    logros.claves(prefijoSesion(identificador)).then((claves) => {
+      if (vivo) setCelebrados(claves);
+    });
     return () => {
       vivo = false;
     };
-  }, [identificador, programa, sesion, perfil, preferencias]);
+  }, [identificador, logros]);
 
-  const totalSeries = useMemo(
-    () => ejercicios.reduce((suma, e) => suma + (metas[e.ejercicioId]?.series ?? e.series), 0),
-    [ejercicios, metas],
-  );
+  useEffect(() => {
+    if (celebrados === null || ejercicios.length === 0) return;
 
-  const seriesHechas = useMemo(
-    () =>
-      Object.values(hechas).reduce((suma, lista) => suma + lista.length, 0) +
-      // Una descendente cuenta como una serie del día, no como una por bajada.
-      Object.values(bajadas).filter((lista) => lista.length > 0).length,
-    [hechas, bajadas],
-  );
+    const estados = ejercicios.map((ejercicio, posicion) => ({
+      ejercicioId: ejercicio.ejercicioId,
+      musculoObjetivo: ejercicio.musculoObjetivo,
+      completo: completos[posicion] ?? false,
+    }));
 
-  const confirmar = useCallback(
-    async (ejercicio: EjercicioDia, serie: SerieConfirmada) => {
-      const meta = metas[ejercicio.ejercicioId];
+    const nuevos = hitosNuevos(identificador, estados, celebrados);
+    if (nuevos.length === 0) return;
 
-      await sesion.registrarSerie({
-        sesionId: identificador,
-        ejercicioId: ejercicio.ejercicioId,
-        numero: serie.numero,
-        pesoMeta: meta?.pesoMeta ?? null,
-        repsMeta: meta?.repsMeta ?? ejercicio.repMin,
-        pesoLogrado: serie.pesoLogrado,
-        repsLogradas: serie.repsLogradas,
+    for (const hito of nuevos) void logros.marcar(hito.clave);
+    setCelebrados((anterior) => new Set([...(anterior ?? []), ...nuevos.map((h) => h.clave)]));
+
+    // `hitosNuevos` los devuelve de menor a mayor, así que el último es el que
+    // más celebra: si el usuario cierra el día, ve el día, no el último ejercicio.
+    const mayor = nuevos[nuevos.length - 1] as Hito;
+
+    if (mayor.tipo === 'ejercicio') {
+      setCelebracion({
+        nivel: 'medio',
+        titulo: `¡${catalogo.porId(mayor.ejercicioId)?.nombre ?? 'Ejercicio'} completo!`,
       });
-
-      setHechas((anterior) => {
-        const lista = (anterior[ejercicio.ejercicioId] ?? []).filter(
-          (s) => s.numero !== serie.numero,
-        );
-        return { ...anterior, [ejercicio.ejercicioId]: [...lista, serie] };
+    } else if (mayor.tipo === 'musculo') {
+      setCelebracion({
+        nivel: 'grande',
+        titulo: `¡${nombreMusculo(mayor.musculo)} completo!`,
+        detalle: 'Todos los ejercicios de ese músculo, hechos.',
+        musculo: mayor.musculo,
       });
-      setDescanso(ejercicio.descansoSeg);
-    },
-    [identificador, metas, sesion],
-  );
-
-  const confirmarBajada = useCallback(
-    async (ejercicio: EjercicioDia, registro: BajadaRegistrada) => {
-      await sesion.registrarSerie({
-        sesionId: identificador,
-        ejercicioId: ejercicio.ejercicioId,
-        numero: 1,
-        bajada: registro.bajada,
-        pesoMeta: null,
-        repsMeta: 0,
-        pesoLogrado: registro.pesoLogrado,
-        repsLogradas: registro.repsLogradas,
+    } else {
+      setCelebracion({
+        nivel: 'grande',
+        titulo: '¡Día completo!',
+        detalle: 'Pulsa Terminar entrenamiento para cerrarlo.',
       });
+    }
+  }, [completos, ejercicios, identificador, celebrados, logros, catalogo]);
 
-      setBajadas((anterior) => {
-        const lista = (anterior[ejercicio.ejercicioId] ?? []).filter(
-          (b) => b.bajada !== registro.bajada,
-        );
-        return {
-          ...anterior,
-          [ejercicio.ejercicioId]: [...lista, registro].sort((a, b) => a.bajada - b.bajada),
-        };
-      });
-    },
-    [identificador, sesion],
-  );
+  function irA(destino: number) {
+    const limitado = Math.max(0, Math.min(ejercicios.length - 1, destino));
+    setIndice(limitado);
+    lista.current?.scrollToIndex({ index: limitado, animated: true });
+  }
 
-  const quitarBajada = useCallback(
-    async (ejercicioId: string, indice: number) => {
-      await sesion.borrarBajada(identificador, ejercicioId, indice);
-      setBajadas((anterior) => ({
-        ...anterior,
-        [ejercicioId]: (anterior[ejercicioId] ?? []).filter((b) => b.bajada !== indice),
-      }));
-    },
-    [identificador, sesion],
-  );
+  function siguiente() {
+    if (completos[indice]) return irA(indice + 1);
 
-  const alternarDescendente = useCallback(
-    async (ejercicioId: string) => {
-      const activo = !descendentes.has(ejercicioId);
-      await preferencias.marcarDescendente(ejercicioId, activo);
+    const ficha = catalogo.porId(ejercicios[indice]?.ejercicioId ?? '');
+    Alert.alert(
+      'Te faltan series',
+      `Aún no has confirmado todas las series de ${ficha?.nombre ?? 'este ejercicio'}.`,
+      [
+        { text: 'Quedarme', style: 'cancel' },
+        { text: 'Seguir igual', onPress: () => irA(indice + 1) },
+      ],
+    );
+  }
 
-      setDescendentes((anterior) => {
-        const copia = new Set(anterior);
-        if (activo) copia.add(ejercicioId);
-        else copia.delete(ejercicioId);
-        return copia;
-      });
-    },
-    [descendentes, preferencias],
-  );
+  function terminar() {
+    const pendientes = completos.filter((completo) => !completo).length;
+    if (pendientes === 0) return router.replace(`/resumen/${identificador}`);
+
+    Alert.alert(
+      'Quedan ejercicios',
+      `Te faltan ${pendientes} ${pendientes === 1 ? 'ejercicio' : 'ejercicios'} del día.`,
+      [
+        { text: 'Seguir entrenando', style: 'cancel' },
+        { text: 'Terminar igual', onPress: () => router.replace(`/resumen/${identificador}`) },
+      ],
+    );
+  }
 
   if (!datosPerfil || ejercicios.length === 0) {
     return <View style={{ flex: 1, backgroundColor: colores.fondo }} />;
@@ -215,16 +158,20 @@ export default function PantallaSesion() {
       <View style={{ paddingHorizontal: espaciado.lg, gap: espaciado.sm }}>
         <Text style={tipografia.seccion}>{nombreDia}</Text>
         <Text style={tipografia.tenue}>
-          {seriesHechas} de {totalSeries} series
+          Ejercicio {indice + 1} de {ejercicios.length} · {seriesHechas} de {totalSeries} series
         </Text>
         <BarraProgreso valor={seriesHechas} total={totalSeries} />
       </View>
 
       <FlatList
+        ref={lista}
         data={ejercicios}
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(evento) =>
+          setIndice(Math.round(evento.nativeEvent.contentOffset.x / ANCHO))
+        }
         keyExtractor={(item) => item.ejercicioId}
         renderItem={({ item }) => {
           const ficha = catalogo.porId(item.ejercicioId);
@@ -234,94 +181,34 @@ export default function PantallaSesion() {
           if (!ficha || !meta || !metaDesc) return <View style={{ width: ANCHO }} />;
 
           return (
-            <ScrollView
-              style={{ width: ANCHO }}
-              contentContainerStyle={{ padding: espaciado.lg, gap: espaciado.md }}
-            >
-              <GifEjercicio ejercicio={ficha} />
-              <Text style={tipografia.seccion}>{ficha.nombre}</Text>
-
-              <View style={{ flexDirection: 'row', gap: espaciado.sm, flexWrap: 'wrap' }}>
-                <Text
-                  style={{
-                    ...chip,
-                    color: colores.acentoTexto,
-                    backgroundColor: colores.acento,
-                  }}
-                >
-                  {nombreMusculo(ficha.musculo)}
-                </Text>
-                {ficha.musculosSecundarios.map((musculo) => (
-                  <Text
-                    key={musculo}
-                    style={{
-                      ...chip,
-                      color: colores.texto,
-                      backgroundColor: colores.superficieAlta,
-                    }}
-                  >
-                    {nombreMusculo(musculo)}
-                  </Text>
-                ))}
-              </View>
-
-              {item.equipamiento !== 'bodyweight' && (
-                <Text
-                  testID={`interruptor-descendente-${item.ejercicioId}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: esDescendente }}
-                  onPress={() => alternarDescendente(item.ejercicioId)}
-                  style={{
-                    ...tipografia.tenue,
-                    alignSelf: 'flex-start',
-                    paddingVertical: espaciado.sm,
-                    paddingHorizontal: espaciado.md,
-                    borderRadius: radio.sm,
-                    overflow: 'hidden',
-                    backgroundColor: esDescendente ? colores.acento : colores.superficieAlta,
-                    color: esDescendente ? colores.acentoTexto : colores.texto,
-                  }}
-                >
-                  {esDescendente ? 'Serie descendente activada' : 'Hacer serie descendente'}
-                </Text>
-              )}
-
-              {esDescendente ? (
-                <TablaDescendente
-                  meta={metaDesc}
-                  perfil={datosPerfil}
-                  bajadas={bajadas[item.ejercicioId] ?? []}
-                  onConfirmar={(registro) => confirmarBajada(item, registro)}
-                  onQuitar={(indice) => quitarBajada(item.ejercicioId, indice)}
-                />
-              ) : (
-                <>
-                  {meta.pesoInicialRequerido && (
-                    <Text style={tipografia.tenue}>
-                      Primera vez con este ejercicio: escribe el peso con el que empiezas.
-                    </Text>
-                  )}
-
-                  <TablaSeries
-                    meta={meta}
-                    conCarga={item.equipamiento !== 'bodyweight'}
-                    registradas={hechas[item.ejercicioId] ?? []}
-                    onConfirmar={(serie) => confirmar(item, serie)}
-                  />
-                </>
-              )}
-            </ScrollView>
+            <TarjetaEjercicio
+              ejercicio={item}
+              ficha={ficha}
+              meta={meta}
+              metaDesc={metaDesc}
+              perfil={datosPerfil}
+              esDescendente={esDescendente}
+              hechas={hechas[item.ejercicioId] ?? []}
+              bajadas={bajadas[item.ejercicioId] ?? []}
+              ancho={ANCHO}
+              onConfirmar={(serie) => confirmar(item, serie)}
+              onConfirmarBajada={(registro) => confirmarBajada(item, registro)}
+              onQuitarBajada={(bajada) => quitarBajada(item.ejercicioId, bajada)}
+              onAlternarDescendente={() => alternarDescendente(item.ejercicioId)}
+            />
           );
         }}
       />
 
-      <View style={{ padding: espaciado.lg }}>
-        <Boton
-          testID="terminar-sesion"
-          titulo="Terminar entrenamiento"
-          onPress={() => router.replace(`/resumen/${identificador}`)}
-        />
-      </View>
+      <BarraEjercicios
+        total={ejercicios.length}
+        indice={indice}
+        completos={completos}
+        onAnterior={() => irA(indice - 1)}
+        onSiguiente={siguiente}
+        onTerminar={terminar}
+        onIrA={irA}
+      />
 
       <Modal visible={descanso !== null} transparent animationType="slide">
         <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: '#000000AA' }}>
@@ -330,6 +217,15 @@ export default function PantallaSesion() {
           )}
         </View>
       </Modal>
+
+      <Celebracion
+        visible={celebracion !== null}
+        nivel={celebracion?.nivel ?? 'medio'}
+        titulo={celebracion?.titulo ?? ''}
+        detalle={celebracion?.detalle}
+        musculo={celebracion?.musculo}
+        onCerrar={() => setCelebracion(null)}
+      />
     </View>
   );
 }

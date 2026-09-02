@@ -13,6 +13,7 @@ const PERFIL: Perfil = {
   nivel: 'intermedio',
   objetivo: 'volumen',
   diasPorSemana: 4,
+  diasSemana: [1, 2, 4, 5],
   mancuernaMinKg: 2,
   mancuernaMaxKg: 30,
   incrementoKg: 2,

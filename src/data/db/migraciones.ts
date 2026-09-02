@@ -154,6 +154,15 @@ export const MIGRACIONES: string[][] = [
       activado_en TEXT NOT NULL
     )`,
   ],
+  // 004 — agenda semanal y logros celebrados
+  [
+    // CSV de índices de día (0 = domingo). Vacío = derivar de dias_por_semana.
+    "ALTER TABLE perfil ADD COLUMN dias_semana TEXT NOT NULL DEFAULT ''",
+    `CREATE TABLE logro (
+      clave TEXT PRIMARY KEY,
+      conseguido_en TEXT NOT NULL
+    )`,
+  ],
 ];
 
 export async function versionActual(adaptador: Adaptador): Promise<number> {

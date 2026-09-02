@@ -82,4 +82,32 @@ describe('repositorio de sesiones', () => {
     expect(await repo.completadasEntre('2000-01-01', '2100-01-01')).toHaveLength(1);
     expect(await repo.diasCompletados()).toEqual([diaId]);
   });
+
+  it('fechasCompletadas agrupa por día local, ignora borradores y ordena', async () => {
+    const adaptador = crearAdaptadorMemoria();
+    await migrar(adaptador);
+    const diaId = await conDiaDePrograma(adaptador);
+    const repo = repoSesion(adaptador);
+
+    const sesionA = await repo.crear(diaId);
+    const sesionB = await repo.crear(diaId);
+    await repo.crear(diaId); // se deja en borrador, no debe contar
+
+    await adaptador.ejecutar(
+      "UPDATE sesion SET estado = 'completada', terminada_en = ? WHERE id = ?",
+      ['2026-01-02T10:00:00.000Z', sesionA],
+    );
+    await adaptador.ejecutar(
+      "UPDATE sesion SET estado = 'completada', terminada_en = ? WHERE id = ?",
+      ['2026-01-01T10:00:00.000Z', sesionB],
+    );
+
+    const otraSesion = await repo.crear(diaId);
+    await adaptador.ejecutar(
+      "UPDATE sesion SET estado = 'completada', terminada_en = ? WHERE id = ?",
+      ['2026-01-02T09:00:00.000Z', otraSesion],
+    );
+
+    expect(await repo.fechasCompletadas()).toEqual(['2026-01-01', '2026-01-02']);
+  });
 });
