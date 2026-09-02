@@ -48,7 +48,7 @@ export function TarjetaEjercicio({
   ancho: number;
   onConfirmar: (serie: SerieConfirmada) => void;
   onConfirmarBajada: (registro: BajadaRegistrada) => void;
-  onQuitarBajada: (indice: number) => void;
+  onQuitarBajada: (bajada: number) => void;
   onAlternarDescendente: () => void;
 }) {
   return (

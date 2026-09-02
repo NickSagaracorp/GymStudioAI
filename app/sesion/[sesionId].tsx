@@ -131,7 +131,7 @@ export default function PantallaSesion() {
               ancho={ANCHO}
               onConfirmar={(serie) => confirmar(item, serie)}
               onConfirmarBajada={(registro) => confirmarBajada(item, registro)}
-              onQuitarBajada={(indice) => quitarBajada(item.ejercicioId, indice)}
+              onQuitarBajada={(bajada) => quitarBajada(item.ejercicioId, bajada)}
               onAlternarDescendente={() => alternarDescendente(item.ejercicioId)}
             />
           );
