@@ -2,6 +2,13 @@ import { act, fireEvent, render } from '@testing-library/react-native';
 import * as Haptics from 'expo-haptics';
 import { Celebracion } from '../Celebracion';
 
+// Montar el primer `Modal` bajo jest-expo cuesta unos dos segundos, y con
+// varios workers en paralelo eso roza el límite de 5 s por test. El coste está
+// en el preset, no en el componente: medido, el confeti aporta 0,6 s y el Modal
+// 2,2 s. El Modal no se puede quitar, porque la celebración tiene que poder
+// aparecer por encima del cronómetro de descanso, que también es un Modal.
+jest.setTimeout(15000);
+
 jest.mock('expo-haptics', () => ({
   impactAsync: jest.fn(),
   notificationAsync: jest.fn(),
