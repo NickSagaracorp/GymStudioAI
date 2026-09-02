@@ -13,26 +13,32 @@ const PIEZAS: Record<NivelCelebracion, number> = { chico: 0, medio: 16, grande: 
 const DURACION: Record<NivelCelebracion, number> = { chico: 900, medio: 1600, grande: 2200 };
 const PALETA = [colores.acento, colores.exito, colores.aviso, colores.texto];
 
-function Pieza({ indice, total, duracion }: { indice: number; total: number; duracion: number }) {
-  const avance = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(avance, {
-      toValue: 1,
-      duration: duracion,
-      delay: (indice % 8) * 60,
-      easing: Easing.out(Easing.quad),
-      useNativeDriver: true,
-    }).start();
-  }, [avance, duracion, indice]);
+/**
+ * Todas las piezas comparten un único `Animated.Value`: lanzar una animación
+ * por pieza son treinta y dos bucles simultáneos, que en un móvil de gama media
+ * se notan justo cuando la celebración tiene que ir fina. El escalonado sale de
+ * darle a cada pieza una ventana de arranque distinta sobre el mismo avance.
+ */
+function Pieza({
+  indice,
+  total,
+  avance,
+}: {
+  indice: number;
+  total: number;
+  avance: Animated.Value;
+}) {
+  const arranque = ((indice % 8) / 8) * 0.3;
 
   const desplazamiento = avance.interpolate({
-    inputRange: [0, 1],
+    inputRange: [arranque, 1],
     outputRange: [-60, ALTO],
+    extrapolate: 'clamp',
   });
   const giro = avance.interpolate({
-    inputRange: [0, 1],
+    inputRange: [arranque, 1],
     outputRange: ['0deg', `${(indice % 2 === 0 ? 1 : -1) * 720}deg`],
+    extrapolate: 'clamp',
   });
 
   return (
@@ -71,6 +77,8 @@ export function Celebracion({
   musculo?: Musculo;
   onCerrar: () => void;
 }) {
+  const avance = useRef(new Animated.Value(0)).current;
+
   useEffect(() => {
     if (!visible) return;
 
@@ -80,9 +88,22 @@ export function Celebracion({
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
 
+    // Volver a cero deja la celebración lista para repetirse en el siguiente hito.
+    avance.setValue(0);
+    const animacion = Animated.timing(avance, {
+      toValue: 1,
+      duration: DURACION[nivel],
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+    animacion.start();
+
     const temporizador = setTimeout(onCerrar, DURACION[nivel] + 400);
-    return () => clearTimeout(temporizador);
-  }, [visible, nivel, onCerrar]);
+    return () => {
+      animacion.stop();
+      clearTimeout(temporizador);
+    };
+  }, [visible, nivel, onCerrar, avance]);
 
   if (!visible) return null;
 
@@ -101,12 +122,7 @@ export function Celebracion({
         }}
       >
         {Array.from({ length: PIEZAS[nivel] }, (_, indice) => (
-          <Pieza
-            key={indice}
-            indice={indice}
-            total={PIEZAS[nivel]}
-            duracion={DURACION[nivel]}
-          />
+          <Pieza key={indice} indice={indice} total={PIEZAS[nivel]} avance={avance} />
         ))}
 
         {musculo && (
