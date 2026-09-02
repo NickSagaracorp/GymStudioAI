@@ -60,8 +60,10 @@ export default function Hoy() {
 
         if (miPerfil) {
           const hoy = new Date();
-          const fecha = hoy.toISOString().slice(0, 10);
-          const yaMedido = await mediciones.hayEn(fecha);
+          // En local, no en UTC: `medicion.tsx` guarda el día local, y con un
+          // huso al oeste de Greenwich una medición de la tarde se buscaría en
+          // el día siguiente y "Toca pesarte" no se apagaría nunca.
+          const yaMedido = await mediciones.hayEn(diaLocal(hoy));
           if (vivo) setTocaPesarse(hoy.getDay() === miPerfil.diaMedicion && !yaMedido);
         }
 

@@ -8,6 +8,7 @@ import { SelectorDias } from '@/ui/componentes/SelectorDias';
 import { colores, espaciado, radio, tipografia } from '@/ui/tema';
 import { generarPrograma } from '@/domain/planner/programa';
 import { programarAvisoMedicion } from '@/services/avisos';
+import { diaLocal } from '@/domain/gamificacion/fechas';
 import { calcularObjetivo } from '@/domain/nutricion/objetivos';
 import type { NivelActividad } from '@/domain/nutricion/tipos';
 import type { Nivel, Objetivo, Perfil } from '@/data/db/repos/perfil';
@@ -140,7 +141,7 @@ export default function Onboarding() {
 
     // El peso inicial arranca la gráfica de progreso desde el primer día.
     await mediciones.guardar({
-      fecha: new Date().toISOString().slice(0, 10),
+      fecha: diaLocal(new Date()),
       pesoKg: pesoKg as number,
       notas: null,
       medidas: {},
