@@ -1,12 +1,17 @@
 import { useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { router } from 'expo-router';
 import { useApp } from '@/ui/ContextoApp';
 import { Boton } from '@/ui/componentes/Boton';
 import { CampoNumero } from '@/ui/componentes/CampoNumero';
+import { Celebracion } from '@/ui/componentes/Celebracion';
 import { TIPOS_MEDIDA } from '@/data/db/repos/mediciones';
 import type { TipoMedida } from '@/data/db/repos/mediciones';
-import { colores, espaciado, tipografia } from '@/ui/tema';
+import { evaluarMedicion } from '@/domain/gamificacion/mediciones';
+import type { Veredicto } from '@/domain/gamificacion/mediciones';
+import { calcularRacha } from '@/domain/gamificacion/racha';
+import { diaLocal, sumarDias } from '@/domain/gamificacion/fechas';
+import { colores, espaciado, radio, tipografia } from '@/ui/tema';
 
 const ETIQUETAS: Record<TipoMedida, string> = {
   cuello: 'Cuello',
@@ -21,22 +26,38 @@ const ETIQUETAS: Record<TipoMedida, string> = {
 };
 
 export default function Medicion() {
-  const { mediciones } = useApp();
+  const { mediciones, perfil, sesion } = useApp();
   const [pesoKg, setPesoKg] = useState<number | null>(null);
   const [valores, setValores] = useState<Partial<Record<TipoMedida, number>>>({});
   const [guardando, setGuardando] = useState(false);
+  const [veredicto, setVeredicto] = useState<Veredicto | null>(null);
 
   async function guardar() {
     if (pesoKg === null || guardando) return;
     setGuardando(true);
 
-    await mediciones.guardar({
-      fecha: new Date().toISOString().slice(0, 10),
-      pesoKg,
-      notas: null,
-      medidas: valores,
-    });
-    router.back();
+    // El historial se lee antes de guardar: la última entrada es con la que hay
+    // que comparar, y después de guardar la última sería la de hoy.
+    const historial = await mediciones.historial();
+    const anterior = historial[historial.length - 1] ?? null;
+
+    const hoy = diaLocal(new Date());
+    await mediciones.guardar({ fecha: hoy, pesoKg, notas: null, medidas: valores });
+
+    const [miPerfil, fechas] = await Promise.all([perfil.obtener(), sesion.fechasCompletadas()]);
+    const desdeHaceUnMes = sumarDias(hoy, -30);
+
+    setVeredicto(
+      evaluarMedicion(
+        miPerfil?.objetivo ?? 'volumen',
+        anterior,
+        { id: 0, fecha: hoy, pesoKg, notas: null, medidas: valores },
+        {
+          entrenamientosDelMes: fechas.filter((fecha) => fecha >= desdeHaceUnMes).length,
+          rachaActual: calcularRacha(fechas, miPerfil?.diasSemana ?? [], hoy).actual,
+        },
+      ),
+    );
   }
 
   return (
@@ -82,9 +103,34 @@ export default function Medicion() {
         testID="guardar-medicion"
         titulo="Guardar"
         onPress={guardar}
-        deshabilitado={pesoKg === null || guardando}
+        deshabilitado={pesoKg === null || guardando || veredicto !== null}
       />
       <Boton titulo="Cancelar" variante="secundario" onPress={() => router.back()} />
+
+      {veredicto?.hayProgreso && (
+        <Celebracion
+          visible
+          nivel="grande"
+          titulo={veredicto.titulo}
+          detalle={veredicto.detalle}
+          onCerrar={() => router.back()}
+        />
+      )}
+
+      {veredicto && !veredicto.hayProgreso && (
+        <View
+          style={{
+            backgroundColor: colores.superficie,
+            borderRadius: radio.md,
+            padding: espaciado.md,
+            gap: espaciado.sm,
+          }}
+        >
+          <Text style={tipografia.seccion}>{veredicto.titulo}</Text>
+          <Text style={tipografia.tenue}>{veredicto.detalle}</Text>
+          <Boton testID="volver-medicion" titulo="Volver" onPress={() => router.back()} />
+        </View>
+      )}
     </ScrollView>
   );
 }

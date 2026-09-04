@@ -4,14 +4,16 @@ App móvil de entrenamiento con mancuernas y seguimiento de comidas. Funciona
 sin internet salvo el análisis de fotos con IA. Todos los datos viven en el
 dispositivo: no hay servidor ni cuentas.
 
-React Native + Expo SDK 57 · TypeScript · SQLite · 250 tests.
+React Native + Expo SDK 57 · TypeScript · SQLite · 337 tests.
 
 ## Qué hace
 
-**Entrenamiento.** Genera un programa de 8 semanas a partir de tu objetivo, tus
-días disponibles y las mancuernas que tienes. Te guía ejercicio a ejercicio con
-la animación, la silueta del músculo trabajado y el registro de series con meta
-y logro. La carga progresa sola por doble progresión.
+**Entrenamiento.** Genera un programa de 8 semanas a partir de tu objetivo, los
+días de la semana que eliges entrenar y las mancuernas que tienes. Te guía
+ejercicio a ejercicio con la animación, la silueta del músculo trabajado y el
+registro de series con meta y logro. Un botón te lleva al siguiente ejercicio y
+avisa si te dejas series sin confirmar; el de terminar solo aparece en el
+último. La carga progresa sola por doble progresión.
 
 **Series descendentes.** Cualquier ejercicio con peso se puede marcar como
 descendente: arrancas con el peso tope, vas al fallo, y encadenas bajadas que la
@@ -21,7 +23,17 @@ app propone al 80 % del peso anterior.
 Registras comidas a mano o fotografiándolas: la IA estima los alimentos y tú
 corriges las raciones antes de guardar.
 
-**Progreso.** Peso corporal y nueve medidas, con gráficas y aviso semanal.
+**Rachas.** Un marcador de lunes a domingo marca con fuego los días que
+cumples y con hielo los que fallas. Solo cuentan los días de tu agenda: un
+domingo de descanso no rompe nada.
+
+**Celebraciones.** Confeti y vibración al completar un ejercicio, todos los
+ejercicios de un músculo, el día entero o al mantener la racha. La serie suelta
+solo vibra, para que las celebraciones grandes no pierdan efecto.
+
+**Progreso.** Peso corporal y nueve medidas, con gráficas y aviso semanal. El
+día de pesarte la app compara con la medición anterior según tu objetivo y lo
+celebra si hubo progreso; si no lo hubo, no hay reproche.
 
 ## Puesta en marcha
 
@@ -57,7 +69,7 @@ entero sin simulador.
 ## Comandos
 
 ```bash
-npm test              # 250 tests
+npm test              # 337 tests
 npx tsc --noEmit      # comprobación de tipos
 npm run catalogo      # regenera el catálogo de ejercicios
 ```

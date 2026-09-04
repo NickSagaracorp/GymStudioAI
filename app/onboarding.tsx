@@ -4,9 +4,11 @@ import { router } from 'expo-router';
 import { useApp } from '@/ui/ContextoApp';
 import { Boton } from '@/ui/componentes/Boton';
 import { CampoNumero } from '@/ui/componentes/CampoNumero';
+import { SelectorDias } from '@/ui/componentes/SelectorDias';
 import { colores, espaciado, radio, tipografia } from '@/ui/tema';
 import { generarPrograma } from '@/domain/planner/programa';
 import { programarAvisoMedicion } from '@/services/avisos';
+import { diaLocal } from '@/domain/gamificacion/fechas';
 import { calcularObjetivo } from '@/domain/nutricion/objetivos';
 import type { NivelActividad } from '@/domain/nutricion/tipos';
 import type { Nivel, Objetivo, Perfil } from '@/data/db/repos/perfil';
@@ -92,7 +94,7 @@ export default function Onboarding() {
   const [nivelActividad, setNivelActividad] = useState<NivelActividad>('moderado');
   const [objetivo, setObjetivo] = useState<Objetivo>('volumen');
   const [nivel, setNivel] = useState<Nivel>('principiante');
-  const [diasPorSemana, setDiasPorSemana] = useState(3);
+  const [agenda, setAgenda] = useState<number[]>([1, 3, 5]);
   const [mancuernaMinKg, setMancuernaMinKg] = useState<number | null>(2);
   const [mancuernaMaxKg, setMancuernaMaxKg] = useState<number | null>(20);
   const [incrementoKg, setIncrementoKg] = useState<number | null>(2);
@@ -124,7 +126,8 @@ export default function Onboarding() {
       alturaCm: alturaCm as number,
       nivel,
       objetivo,
-      diasPorSemana,
+      diasPorSemana: agenda.length,
+      diasSemana: agenda,
       mancuernaMinKg: mancuernaMinKg as number,
       mancuernaMaxKg: mancuernaMaxKg as number,
       incrementoKg: incrementoKg as number,
@@ -138,7 +141,7 @@ export default function Onboarding() {
 
     // El peso inicial arranca la gráfica de progreso desde el primer día.
     await mediciones.guardar({
-      fecha: new Date().toISOString().slice(0, 10),
+      fecha: diaLocal(new Date()),
       pesoKg: pesoKg as number,
       notas: null,
       medidas: {},
@@ -247,13 +250,11 @@ export default function Onboarding() {
       </View>
 
       <View style={{ gap: espaciado.sm }}>
-        <Text style={tipografia.seccion}>Días por semana</Text>
-        <Opciones
-          valores={[2, 3, 4, 5, 6].map((d) => ({ valor: d, etiqueta: String(d) }))}
-          seleccionado={diasPorSemana}
-          onElegir={setDiasPorSemana}
-          prefijoTestID="dias"
-        />
+        <Text style={tipografia.seccion}>Qué días entrenas</Text>
+        <SelectorDias seleccionados={agenda} onCambio={setAgenda} />
+        <Text style={tipografia.tenue}>
+          Entre 2 y 6 días. Tu racha solo cuenta estos días.
+        </Text>
       </View>
 
       <View style={{ gap: espaciado.sm }}>

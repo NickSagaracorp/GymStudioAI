@@ -1,5 +1,6 @@
 import type { Adaptador } from '../adaptador';
 import type { SerieHecha } from '@/domain/planner/tipos';
+import { diaDeIso } from '@/domain/gamificacion/fechas';
 
 export type EstadoSesion = 'borrador' | 'completada' | 'abandonada';
 
@@ -174,6 +175,15 @@ export function repoSesion(adaptador: Adaptador) {
         "SELECT DISTINCT dia_programa_id FROM sesion WHERE estado = 'completada'",
       );
       return filas.map((fila) => fila.dia_programa_id);
+    },
+
+    /** Días locales con al menos una sesión completada, de menor a mayor. */
+    async fechasCompletadas(): Promise<string[]> {
+      const filas = await adaptador.consultar<{ terminada_en: string }>(
+        `SELECT terminada_en FROM sesion
+         WHERE estado = 'completada' AND terminada_en IS NOT NULL`,
+      );
+      return [...new Set(filas.map((fila) => diaDeIso(fila.terminada_en)))].sort();
     },
   };
 }

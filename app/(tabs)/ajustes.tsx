@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import { useApp } from '@/ui/ContextoApp';
 import { Boton } from '@/ui/componentes/Boton';
 import { CampoNumero } from '@/ui/componentes/CampoNumero';
+import { SelectorDias } from '@/ui/componentes/SelectorDias';
 import { generarPrograma } from '@/domain/planner/programa';
 import { calcularObjetivo, objetivoConCalorias } from '@/domain/nutricion/objetivos';
 import { programarAvisoMedicion } from '@/services/avisos';
@@ -33,19 +34,22 @@ export default function Ajustes() {
   const [tamanoCache, setTamanoCache] = useState(0);
   const [mensaje, setMensaje] = useState('');
   const [ocupado, setOcupado] = useState(false);
+  const [agenda, setAgenda] = useState<number[]>([]);
 
   useEffect(() => {
     let vivo = true;
 
     (async () => {
-      const [clave, esPorDefecto, nombreModelo, conservar, objetivo, total] = await Promise.all([
-        leerApiKey(),
-        usaClavePorDefecto(),
-        leerModelo(),
-        leerConservarFotos(),
-        nutricion.objetivo(),
-        cache.tamanoTotal(),
-      ]);
+      const [clave, esPorDefecto, nombreModelo, conservar, objetivo, total, miPerfil] =
+        await Promise.all([
+          leerApiKey(),
+          usaClavePorDefecto(),
+          leerModelo(),
+          leerConservarFotos(),
+          nutricion.objetivo(),
+          cache.tamanoTotal(),
+          perfil.obtener(),
+        ]);
       if (!vivo) return;
 
       setApiKey(clave);
@@ -54,12 +58,13 @@ export default function Ajustes() {
       setConservarFotos(conservar);
       setKcalObjetivo(objetivo?.kcal ?? null);
       setTamanoCache(total);
+      setAgenda(miPerfil?.diasSemana ?? []);
     })();
 
     return () => {
       vivo = false;
     };
-  }, [cache, nutricion]);
+  }, [cache, nutricion, perfil]);
 
   async function guardarClave() {
     const limpia = apiKey.trim();
@@ -169,6 +174,13 @@ export default function Ajustes() {
     setTamanoCache(await cache.tamanoTotal());
     setMensaje(`Listo: ${ids.size} animaciones disponibles sin conexión.`);
     setOcupado(false);
+  }
+
+  async function guardarAgenda() {
+    const miPerfil = await perfil.obtener();
+    if (!miPerfil) return;
+    await perfil.guardar({ ...miPerfil, diasSemana: agenda, diasPorSemana: agenda.length });
+    setMensaje('Agenda guardada.');
   }
 
   async function regenerar() {
@@ -297,6 +309,17 @@ export default function Ajustes() {
       />
 
       <Text style={tipografia.seccion}>Programa</Text>
+
+      <Text style={tipografia.cuerpo}>Qué días entrenas</Text>
+      <Text style={tipografia.tenue}>Entre 2 y 6 días. Tu racha solo cuenta estos días.</Text>
+      {agenda.length > 0 && <SelectorDias seleccionados={agenda} onCambio={setAgenda} />}
+      <Boton
+        testID="guardar-agenda"
+        titulo="Guardar agenda"
+        variante="secundario"
+        onPress={guardarAgenda}
+      />
+
       <Boton
         titulo="Regenerar programa"
         variante="secundario"
